@@ -1,0 +1,10 @@
+{
+    "color": "/assets/terrain/rock_basecolor.png",
+    "height": "/assets/terrain/rock_height.png",
+    "normal": "/assets/terrain/rock_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/rock_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true
+    }
+}

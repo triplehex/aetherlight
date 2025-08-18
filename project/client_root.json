@@ -1,0 +1,81 @@
+{
+    "renderer" : {
+        "pbr_vertex_shader": "/assets/shaders/primitive.wgsl",
+        "pbr_fragment_shader": "/assets/shaders/pbr.wgsl",
+
+        "fullscreen_vert_shader": "/assets/shaders/fullscreen.wgsl",
+        "panorama_to_cubemap_shader": "/assets/shaders/panorama_to_cubemap.wgsl",
+        "ibl_filter_shader": "/assets/shaders/ibl_filtering.wgsl",
+        "cubemap_shader": "/assets/shaders/cubemap.wgsl",
+
+        "skybox_hdri": "/assets/kloofendal_43d_clear_puresky_1k.hdr",
+
+        "view_distance": 150.0,
+        "shadow_cascades": [
+            8.0,
+            32.0,
+            150.0
+        ],
+
+        "skybox_intensity": 0.25,
+
+        "lights": [
+            {
+                "color": [1.0, 1.0, 1.0],
+                "position": [100.0, 100.0, 0.0],
+                "direction": [-100.0, -100.0, 0.0],
+                "inner_cone_cos": 0.0,
+                "range": 100.0,
+                "intensity": 3,
+                "outer_cone_cos": 0.0,
+                "light_type": 0
+            }
+        ],
+    
+        "lowest_filter_mip_level": 4,
+        "skybox_size": 256,
+        "lambertian_filter": {
+            "size": 256,
+            "roughness": 0.0,
+            "sample_count": 2024,
+            "lod_bias": 0.0,
+            "intensity_scale": 1.0
+        },
+        "ggx_filter": {
+            "size": 256,
+            "roughness": 0.0,
+            "sample_count": 1024,
+            "lod_bias": 5.0,
+            "intensity_scale": 0.2
+        },
+        "ggx_lut_filter": {
+            "size": 1024,
+            "roughness": 0.0,
+            "sample_count": 512,
+            "lod_bias": 0.0,
+            "intensity_scale": 1.0
+        },
+
+        "post_process": {
+            "parameters" : {
+                "min_log_luminance": -7.0,
+                "max_log_luminance": 2.0,
+                "tone_mapping_target_luminance": 0.2,
+                "max_bloom_iterations": 16,
+                "bloom_intensity": 0.2
+            },
+
+            "bloom_pre_filter" : "/assets/shaders/bloom_pre_filter.wgsl",
+            "bloom_upsample" : "/assets/shaders/bloom_upsample.wgsl",
+            "bloom_downsample" : "/assets/shaders/bloom_downsample.wgsl",
+            "tone_mapping" : "/assets/shaders/tone_mapping.wgsl",
+
+            "bloom_kernel_blend_constants": [
+            ]
+        }
+    },
+
+    "water_texture": "/assets/terrain/water.json",
+
+    "render_debug": "None"
+}

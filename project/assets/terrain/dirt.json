@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/dirt_basecolor.png",
+    "height": "/assets/terrain/dirt_height.png",
+    "normal": "/assets/terrain/dirt_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/dirt_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

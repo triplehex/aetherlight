@@ -1,0 +1,10 @@
+{
+    "color": "/assets/terrain/sand_basecolor.png",
+    "height": "/assets/terrain/sand_height.png",
+    "normal": "/assets/terrain/sand_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/sand_metallic_roughness.png",
+        "use_metallic": true,
+        "use_roughness": true
+    }
+}

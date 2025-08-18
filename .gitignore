@@ -1,0 +1,11 @@
+storage
+aether
+session_token
+
+# Logs
+*.log
+
+# misc
+.DS_Store
+Thumbs.db
+.direnv

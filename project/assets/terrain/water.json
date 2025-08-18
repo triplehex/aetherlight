@@ -1,0 +1,10 @@
+{
+    "color": "/assets/terrain/water_basecolor.png",
+    "height": "/assets/terrain/water_height.png",
+    "normal": "/assets/terrain/water_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/water_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true
+    }
+}

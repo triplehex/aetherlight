@@ -1,0 +1,17 @@
+{
+    "heightmap": "/world/heightmap.png",
+    "height_scale": 50.0,
+    "height_offset": -4.0,
+    "texture_maps" : [
+        "/world/sand.png",
+        "/world/dirt.png",
+        "/world/rock.png",
+        "/world/grass.png"
+    ],
+    "textures": [
+        "/assets/terrain/sand.json",
+        "/assets/terrain/dirt.json",
+        "/assets/terrain/rock.json",
+        "/assets/terrain/grass.json"
+    ]
+}

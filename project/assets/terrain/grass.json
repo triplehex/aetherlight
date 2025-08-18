@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/grass_basecolor.png",
+    "height": "/assets/terrain/grass_height.png",
+    "normal": "/assets/terrain/grass_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/grass_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}
