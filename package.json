@@ -1,0 +1,26 @@
+{
+  "name": "aetherlight",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Game project",
+  "scripts": {
+    "build:player": "esbuild src/player.ts --bundle --platform=neutral --format=esm --target=es2022 --outfile=dist/player.js --sourcemap --minify",
+    "build:client": "esbuild src/client.ts --bundle --platform=neutral --format=esm --target=es2022 --outfile=dist/client.js --sourcemap --minify",
+    "build": "npm run build:client && npm run build:player && aether build . ./storage/project.bundle",
+    "start": "npm run build:client && npm run build:player && aether run .",
+    "deploy": "npm run build && aether deploy ./storage/project.bundle spacejam https://aetherlight.io/api/"
+  },
+  "dependencies": {
+    "@triplehex/aether": "^0.1.2",
+    "@triplehex/aether-cli": "^0.1.2",
+    "three": "^0.160.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/three": "^0.179.0",
+    "esbuild": "^0.21.0"
+  }
+}

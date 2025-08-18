@@ -1,6 +1,6 @@
-import { Vec3 } from 'vec3';
-import { Quat } from 'quat';
-import { ScriptWorld, ClientControlsState } from './shared_sim';
+import { ScriptWorld, ClientControlsState } from '@triplehex/aether';
+// Use three.js math classes instead of custom Vec/Quat globals
+import { Vector3, Quaternion } from 'three';
 
 const CAMERA_CLIENT_ENTITY_ID = 65434;
 const CAMERA_DISTANCE = 3.0;
@@ -13,7 +13,7 @@ class ClientConfig {
 
     constructor(loader: any) {
         // Client configuration goes here
-        this.player_script = loader.loadScript("/scripts/src/player.ts");
+        this.player_script = loader.loadScript("/dist/player.js");
     }
 }
 
@@ -31,8 +31,8 @@ export function init(clientId: number) {
     world.setScript(playerId, config.player_script);
 
     // Initialize camera entity with default position and rotation
-    world.setPosition(CAMERA_CLIENT_ENTITY_ID, new Vec3(0, 5, -10)); // Default camera position
-    world.setRotation(CAMERA_CLIENT_ENTITY_ID, new Quat(0., 0., 0., 1.,)); // Default rotation (identity quaternion)
+    world.setPosition(CAMERA_CLIENT_ENTITY_ID, new Vector3(0, 5, -10)); // Default camera position
+    world.setRotation(CAMERA_CLIENT_ENTITY_ID, new Quaternion(0., 0., 0., 1.)); // Default rotation (identity quaternion)
 
     return { id: playerId, cameraYaw: 0, cameraPitch: 0 };
 }
@@ -57,7 +57,7 @@ function updateThirdPersonCamera(
     currentYaw = currentYaw % (2 * Math.PI);
     if (currentYaw < 0) currentYaw += 2 * Math.PI;
 
-    let lookDir = new Vec3(
+    const lookDir = new Vector3(
         Math.sin(currentYaw) * Math.cos(currentPitch),
         -Math.sin(currentPitch),
         Math.cos(currentYaw) * Math.cos(currentPitch)
@@ -70,16 +70,16 @@ function updateThirdPersonCamera(
     let sp = Math.sin(currentPitch * 0.5);
 
     // Quaternion from YXZ Euler angles (left-handed Y-up)
-    let rotation = {
-        x: sp * cy,  // pitch rotation around X-axis
-        y: sy * cp,  // yaw rotation around Y-axis  
-        z: -sy * sp, // combined Z component (left-handed)
-        w: cy * cp   // scalar component
-    };
-    world.setRotation(cameraEntityId, rotation);
+    const rotationQuat = new Quaternion(
+        sp * cy,      // x
+        sy * cp,      // y
+        -sy * sp,     // z (left-handed adjustment)
+        cy * cp       // w
+    );
+    world.setRotation(cameraEntityId, rotationQuat);
 
-    let playerPos = world.getPosition(playerEntityId);
-    let cameraPos = new Vec3(
+    const playerPos = world.getPosition(playerEntityId);
+    const cameraPos = new Vector3(
         playerPos.x - lookDir.x * CAMERA_DISTANCE,
         playerPos.y - lookDir.y * CAMERA_DISTANCE + CAMERA_HEIGHT,
         playerPos.z - lookDir.z * CAMERA_DISTANCE

@@ -1,8 +1,12 @@
 storage
 aether
 session_token
+aetherengine
+node_modules
+dist
 
 # Logs
+logs
 *.log
 
 # misc

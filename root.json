@@ -1,7 +1,0 @@
-{
-    "client_root": "/client_root.json",
-
-    "terrain": "/world/terrain.json",
-
-    "client_script": "/scripts/src/client.ts"
-}

@@ -1,0 +1,7 @@
+{
+    "client_root": "/assets/client_root.json",
+
+    "terrain": "/assets/world/terrain.json",
+
+    "client_script": "/dist/client.js"
+}
