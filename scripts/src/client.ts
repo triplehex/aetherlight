@@ -44,7 +44,6 @@ function updateThirdPersonCamera(
     currentPitch: number,
     controls: ClientControlsState
 ) {
-    console.log(`Current yaw: ${currentYaw}, Current pitch: ${currentPitch}`);
     var world: ScriptWorld = globalThis.world;
 
     // Update yaw/pitch from right stick input (mouse delta or controller input)
