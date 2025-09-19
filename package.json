@@ -12,14 +12,14 @@
     "deploy": "npm run build && aether deploy ./storage/project.bundle aetherlight https://aetherlight.io/api/"
   },
   "dependencies": {
-    "@triplehex/aether": "^0.1.4",
-    "@triplehex/aether-cli": "^0.1.4",
+    "@triplehex/aether": "0.1.5",
     "three": "^0.160.0"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
+    "@triplehex/aether-cli": "0.1.5",
     "@types/three": "^0.179.0",
     "esbuild": "^0.21.0"
   }
