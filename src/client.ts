@@ -34,7 +34,21 @@ export function init(clientId: number) {
     world.setPosition(CAMERA_CLIENT_ENTITY_ID, new Vector3(0, 5, -10)); // Default camera position
     world.setRotation(CAMERA_CLIENT_ENTITY_ID, new Quaternion(0., 0., 0., 1.)); // Default rotation (identity quaternion)
 
-    return { id: playerId, cameraYaw: 0, cameraPitch: 0 };
+    return { id: playerId, yaw: 0, pitch: 0 };
+}
+
+export function update(state: any, clientId: number, controls: ClientControlsState) {
+    var world: ScriptWorld = globalThis.world;
+    var config: ClientConfig = globalThis.config;
+
+    world.setClientControls(state.id, controls);
+
+    // Update camera using persistent yaw/pitch values from state
+    let cameraResult = updateThirdPersonCamera(CAMERA_CLIENT_ENTITY_ID, state.id, state.yaw, state.pitch, controls);
+
+    // Update state with new yaw/pitch values
+    state.yaw = cameraResult.yaw;
+    state.pitch = cameraResult.pitch;
 }
 
 function updateThirdPersonCamera(
@@ -88,18 +102,4 @@ function updateThirdPersonCamera(
 
     // Return updated yaw/pitch values so they can be stored in state
     return { yaw: currentYaw, pitch: currentPitch };
-}
-
-export function update(state: any, clientId: number, controls: ClientControlsState) {
-    var world: ScriptWorld = globalThis.world;
-    var config: ClientConfig = globalThis.config;
-
-    world.setClientControls(state.id, controls);
-
-    // Update camera using persistent yaw/pitch values from state
-    let cameraResult = updateThirdPersonCamera(CAMERA_CLIENT_ENTITY_ID, state.id, state.cameraYaw, state.cameraPitch, controls);
-
-    // Update state with new yaw/pitch values
-    state.cameraYaw = cameraResult.yaw;
-    state.cameraPitch = cameraResult.pitch;
 }

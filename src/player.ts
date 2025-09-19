@@ -1,7 +1,26 @@
-import { ScriptWorld, CollisionResult } from '@triplehex/aether';
+import { ScriptWorld } from '@triplehex/aether';
 import { Vector3, Quaternion, Vector2 } from 'three';
 
+// Helper math functions replacing previous global utilities
+function add(a: Vector3, b: Vector3): Vector3 { return new Vector3().copy(a).add(b); }
+function mul(a: Vector3, s: number): Vector3 { return new Vector3().copy(a).multiplyScalar(s); }
+function length(v: Vector3): number { return v.length(); }
+function normalize(v: Vector3): Vector3 { return new Vector3().copy(v).normalize(); }
+function deflect(v: Vector3, normal: Vector3): Vector3 {
+    // Reflect velocity along collision normal, dampen a bit
+    const reflected = new Vector3().copy(v).addScaledVector(normal, -v.dot(normal));
+    return reflected;
+}
+
+class CollisionResult {
+    normal: Vector3;
+    toi: number;
+    constructor(normal: Vector3, toi: number) { this.normal = normal; this.toi = toi; }
+}
+
+
 const CAMERA_CLIENT_ENTITY_ID = 65434;
+
 const TICK_DT = 1.0 / 20.0;
 const MOVE_SPEED = 6.;
 
@@ -82,7 +101,8 @@ export function update(state: any, playerId: number) {
     }
 
     if (!isOnGround) {
-        velocity.addScaledVector(GRAVITY, TICK_DT);
+        let gravity = new Vector3(0., -30., 0.);
+        velocity = add(velocity, mul(gravity, TICK_DT));
     }
 
     if (isOnGround && controls.jump) {
@@ -92,34 +112,33 @@ export function update(state: any, playerId: number) {
         isOnGround = false; // Reset ground state after jumping
     }
 
-    var to = pos.clone();
+    var to = new Vector3(pos.x, pos.y, pos.z);
 
     var remaining_time = TICK_DT;
     var corrections = 5;
     while (remaining_time > 0. && corrections > 0) {
         let castResult = castPlayerCylinder(pos, velocity, remaining_time);
         if (castResult) {
-            const cast_pos = pos.clone().addScaledVector(velocity, castResult.toi);
+            const cast_pos = add(pos, mul(velocity, castResult.toi));
             const normal = new Vector3(castResult.normal.x, castResult.normal.y, castResult.normal.z);
-            to = cast_pos.clone().addScaledVector(normal, 0.01);
-            pos.copy(to);
-            // Deflect velocity along collision normal (same math as previous helper)
-            velocity.addScaledVector(normal, -velocity.dot(normal));
+            to = add(cast_pos, mul(normal, 0.01));
+            pos = to;
+            velocity = deflect(velocity, normal);
 
             remaining_time -= castResult.toi;
             corrections -= 1;
         } else {
-            pos.addScaledVector(velocity, remaining_time);
+            pos = add(pos, mul(velocity, remaining_time));
             remaining_time = 0.;
         }
     }
 
-    if (velocity.length() > 50.) {
-        velocity.setLength(50.);
+    if (length(velocity) > 50.) {
+        velocity = mul(normalize(velocity), 50.);
     }
     if (pos.y < -50) {
-        pos.set(80., 25., 80.);
-        velocity.set(0., 0., 0.);
+        pos = new Vector3(80., 25., 80.);
+        velocity = new Vector3(0., 0., 0.);
     }
 
     world.setPosition(playerId, pos);
@@ -145,20 +164,30 @@ export function update(state: any, playerId: number) {
 
 function checkOnGround(p: Vector3): boolean {
     let groundCheckDistance = 0.1;
-    let groundCastResult = castPlayerCylinder(p, DOWN_VECTOR, groundCheckDistance);
-    return groundCastResult;
+    let groundCastResult = castPlayerCylinder(p, new Vector3(0., -1., 0.), groundCheckDistance);
+    if (groundCastResult) {
+        debugPlayerCylinder(p);
+    }
+    return groundCastResult !== undefined;
 }
 
-function castPlayerCylinder(p: Vector3, velocity: Vector3, remaining_toi: number): CollisionResult | null {
+function debugPlayerCylinder(p: Vector3) {
+    var world: ScriptWorld = globalThis.world;
+    world.debugCylinder(add(p, new Vector3(0., CYLINDER_HEIGHT / 2., 0.)), CYLINDER_HEIGHT / 2., 0.25, "blue");
+}
+
+function castPlayerCylinder(p: Vector3, velocity: Vector3, remaining_toi: number): CollisionResult | undefined {
     var world: ScriptWorld = globalThis.world;
     let height = CYLINDER_HEIGHT / 2.;
-    return world.castCylinder(p.clone().add(UP_OFFSET), velocity, height, PLAYER_RADIUS, remaining_toi);
+    let res = world.castCylinder(add(p, new Vector3(0., height, 0.)), velocity, height, 0.25, remaining_toi);
+    return collision_result(res)
 }
 
+function collision_result(res): CollisionResult | undefined {
+    if (res) {
+        return new CollisionResult(new Vector3(res.normal.x, res.normal.y, res.normal.z), res.toi);
+    }
+    return undefined;
+}
 
-// Constants
-const CYLINDER_HEIGHT = 1.4;
-const PLAYER_RADIUS = 0.25;
-const GRAVITY = new Vector3(0., -30., 0.);
-const DOWN_VECTOR = new Vector3(0., -1., 0.);
-const UP_OFFSET = new Vector3(0., CYLINDER_HEIGHT / 2., 0.);
+let CYLINDER_HEIGHT = 1.4;
