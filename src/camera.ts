@@ -1,5 +1,5 @@
 import { ClientControlsState, ScriptWorld } from "@triplehex/aether";
-import { Vector3, Quaternion } from "three";
+import { Vec3, Quat } from "ts-gl-matrix";
 
 const CAMERA_DISTANCE = 3.0;
 const CAMERA_HEIGHT = 1.5;
@@ -25,7 +25,7 @@ export function updateThirdPersonCamera(
     currentYaw = currentYaw % (2 * Math.PI);
     if (currentYaw < 0) currentYaw += 2 * Math.PI;
 
-    const lookDir = new Vector3(
+    const lookDir = new Vec3(
         Math.sin(currentYaw) * Math.cos(currentPitch),
         -Math.sin(currentPitch),
         Math.cos(currentYaw) * Math.cos(currentPitch)
@@ -38,7 +38,7 @@ export function updateThirdPersonCamera(
     let sp = Math.sin(currentPitch * 0.5);
 
     // Quaternion from YXZ Euler angles (left-handed Y-up)
-    const rotationQuat = new Quaternion(
+    const rotationQuat = new Quat(
         sp * cy,      // x
         sy * cp,      // y
         -sy * sp,     // z (left-handed adjustment)
@@ -47,7 +47,7 @@ export function updateThirdPersonCamera(
     world.setRotation(cameraEntityId, rotationQuat);
 
     const playerPos = world.getPosition(playerEntityId);
-    const cameraPos = new Vector3(
+    const cameraPos = new Vec3(
         playerPos.x - lookDir.x * CAMERA_DISTANCE,
         playerPos.y - lookDir.y * CAMERA_DISTANCE + CAMERA_HEIGHT,
         playerPos.z - lookDir.z * CAMERA_DISTANCE

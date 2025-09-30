@@ -1,9 +1,9 @@
 import { ScriptWorld, ScriptModule, AssetLoader } from '@triplehex/aether';
-import { Vector3, Quaternion } from 'three';
+import { Vec3, Quat } from 'ts-gl-matrix';
 import { updateThirdPersonCamera } from './camera';
 import { Player } from './player';
 
-export default class Client extends ScriptModule {
+export class Client extends ScriptModule {
     declare config: {
         playerScript: Player,
     };
@@ -24,8 +24,8 @@ export default class Client extends ScriptModule {
         world.setScript(playerId, this.config.playerScript);
 
         // Initialize camera entity with default position and rotation
-        world.setPosition(entityId, new Vector3(0, 5, -10)); // Default camera position
-        world.setRotation(entityId, new Quaternion(0., 0., 0., 1.)); // Default rotation (identity quaternion)
+        world.setPosition(entityId, new Vec3(0, 5, -10)); // Default camera position
+        world.setRotation(entityId, new Quat(0., 0., 0., 1.)); // Default rotation (identity quaternion)
 
         this.state = { id: playerId, yaw: 0, pitch: 0 };
     }

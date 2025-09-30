@@ -3,5 +3,5 @@
 
     "terrain": "/assets/world/terrain.json",
 
-    "client_script": "/dist/client.js"
+    "script": "/dist/index.js"
 }
