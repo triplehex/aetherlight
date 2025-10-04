@@ -31,18 +31,21 @@ export class Player extends ScriptModule {
         let controls = world.getClientControls(entityId);
 
         // Rotate the 2D movement direction by the camera's Y rotation
-        let cameraRotation = world.getRotation(CAMERA_CLIENT_ENTITY_ID);
-        let yRotation = Math.atan2(2 * (cameraRotation.w * cameraRotation.y + cameraRotation.x * cameraRotation.z),
-            1 - 2 * (cameraRotation.y * cameraRotation.y + cameraRotation.z * cameraRotation.z));
+        let cameraIds = world.taggedEntities('Camera-' + String(entityId));
+        if (cameraIds.length > 0) {
+            let cameraRotation = world.getRotation(cameraIds[0]);
+            let yRotation = Math.atan2(2 * (cameraRotation.w * cameraRotation.y + cameraRotation.x * cameraRotation.z),
+                1 - 2 * (cameraRotation.y * cameraRotation.y + cameraRotation.z * cameraRotation.z));
 
-        let cos = Math.cos(yRotation);
-        let sin = Math.sin(yRotation);
+            let cos = Math.cos(yRotation);
+            let sin = Math.sin(yRotation);
 
-        // Rotate the movement direction vector (left-handed system)
-        let rotatedX = controls.move_direction.x * cos + controls.move_direction.y * sin;
-        let rotatedY = -controls.move_direction.x * sin + controls.move_direction.y * cos;
+            // Rotate the movement direction vector (left-handed system)
+            let rotatedX = controls.move_direction.x * cos + controls.move_direction.y * sin;
+            let rotatedY = -controls.move_direction.x * sin + controls.move_direction.y * cos;
 
-        controls.move_direction = new Vec2(rotatedX, rotatedY);
+            controls.move_direction = new Vec2(rotatedX, rotatedY);
+        }
 
         var v = world.getVelocity(entityId);
         var velocity = new Vec3(v.x, v.y, v.z);
@@ -131,8 +134,6 @@ export class Player extends ScriptModule {
 
 }
 
-
-const CAMERA_CLIENT_ENTITY_ID = 65434;
 
 const TICK_DT = 1.0 / 20.0;
 const MOVE_SPEED = 6.;

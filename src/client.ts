@@ -22,6 +22,8 @@ export class Client extends ScriptModule {
     init(world: ScriptWorld, entityId: number): void {
         let playerId = world.spawn();
         world.setScript(playerId, this.config.playerScript);
+        world.setTag(entityId, 'Camera');
+        world.setTag(entityId, 'Camera-' + String(playerId));
 
         // Initialize camera entity with default position and rotation
         world.setPosition(entityId, new Vec3(0, 5, -10)); // Default camera position
