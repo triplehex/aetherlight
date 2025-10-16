@@ -11,14 +11,15 @@
     "deploy": "npm run build && aether deploy ./storage/aetherlight aetherlight https://aetherlight.io/api/"
   },
   "dependencies": {
-    "@triplehex/aether": "0.1.9",
-    "ts-gl-matrix": "^4.0.3"
+    "@triplehex/aether": "0.1.10",
+    "simplex-noise": "^4.0.1",
+    "seedrandom": "^3.0.5"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
-    "@triplehex/aether-cli": "0.1.9",
+    "@triplehex/aether-cli": "0.1.10",
     "esbuild": "^0.21.0"
   }
 }
