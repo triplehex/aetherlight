@@ -1,5 +1,5 @@
 import { ScriptWorld, ScriptModule, AssetLoader } from '@triplehex/aether';
-import { Vec3, Quat } from 'ts-gl-matrix';
+import { Vec3, Quat } from './math';
 import { updateThirdPersonCamera } from './camera';
 import { Player } from './player';
 

@@ -171,7 +171,7 @@ fn fs_main(@builtin(front_facing) is_front_face: bool, input: VertexOutput) -> @
     var shadow_map_index = vec3<f32>(0.0);
     var shadow = 1.;
     for (var j: i32 = 0; j < 3; j = j + 1) {
-    let pointToLight = -u_Lights.lights[0].direction;
+        let pointToLight = -u_Lights.lights[0].direction;
         let slope_scale_factor = 2.;
         let const_bias = 1.5 * u_View.shadow_bias[j];
         let bias = const_bias + slope_scale_factor * (1.0 - dot(normalInfo.ng, pointToLight)) * u_View.shadow_bias[j];
@@ -262,6 +262,26 @@ fn fs_main(@builtin(front_facing) is_front_face: bool, input: VertexOutput) -> @
     if (debug_shadow) {
         finalColor = vec4<f32>(vec3<f32>(shadow), 1.0);
     }
+    let debug_shadow_uv = false;
+    if (debug_shadow_uv) {
+        let map_index = 0;
+
+        let pointToLight = -u_Lights.lights[0].direction;
+        let slope_scale_factor = 2.;
+        let const_bias = 1.5 * u_View.shadow_bias[map_index];
+        let bias = const_bias + slope_scale_factor * (1.0 - dot(normalInfo.ng, pointToLight)) * u_View.shadow_bias[map_index];
+        let normal_offset = normalInfo.ng * bias;
+        var uv = (u_View.shadow_from_world[map_index] * vec4<f32>(input.world_position + normal_offset, 1.0))
+            * vec4<f32>(0.5, 0.5, 1.0, 1.0)
+            + vec4<f32>(0.5, 0.5, 0.0, 0.0);
+        uv.y = 1.0 - uv.y;
+        finalColor = vec4<f32>(uv.x, uv.y, 0.0, 1.0);
+    }
+    let debug_z = false;
+    if (debug_z) {
+        let depth = input.position.z;
+        finalColor = vec4<f32>(vec3<f32>(depth), 1.0);
+    }
     let debug_shadow_map_index = false;
     if (debug_shadow_map_index) {
         let lum = luminance(color.rgb);
@@ -286,7 +306,15 @@ fn fs_main(@builtin(front_facing) is_front_face: bool, input: VertexOutput) -> @
 #ifdef HAS_TEXTURE_SPLATTING
     let debug_splat_factors = false;
     if (debug_splat_factors) {
-        finalColor = vec4<f32>(g_splatFactors.rgb, 1.0);
+        // normalize splat factors for visualization
+        let splat = input.splatting;
+        let sum = splat.r + splat.g + splat.a;
+        var splatVis = splat;
+        if (sum > 0.0) {
+            splatVis = splat / sum;
+        }
+        finalColor = vec4<f32>(splatVis.rga, 1.0);
+        // finalColor = vec4<f32>(input.splatting.rba, 1.0);
     }
 #endif
     return finalColor;

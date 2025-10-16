@@ -22,8 +22,8 @@
         "lights": [
             {
                 "color": [1.0, 1.0, 1.0],
-                "position": [100.0, 100.0, 0.0],
-                "direction": [-100.0, -100.0, 0.0],
+                "position": [128.0, 128.0, 80.0],
+                "direction": [-64.0, -64.0, -40.0],
                 "inner_cone_cos": 0.0,
                 "range": 100.0,
                 "intensity": 3,

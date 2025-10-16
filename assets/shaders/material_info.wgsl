@@ -341,8 +341,7 @@ fn getEmissiveColor(
     ng: vec3<f32>,
     vertex_color: vec4<f32>,
 ) -> vec3<f32> {
-    var emissive_color = vec3<f32>(1.0);
-    emissive_color = u_MaterialFactors.emissive;
+    var emissive_color = u_MaterialFactors.emissive;
 
 #ifdef HAS_EMISSIVE_MAP
     emissive_color *= sampleColorTexture(u_EmissiveSampler, u_LinearSampler, uv, world_position, ng).rgb;

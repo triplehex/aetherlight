@@ -1,5 +1,5 @@
 import { ClientControlsState, ScriptWorld } from "@triplehex/aether";
-import { Vec3, Quat } from "ts-gl-matrix";
+import { Vec3, Quat } from "./math";
 
 const CAMERA_DISTANCE = 3.0;
 const CAMERA_HEIGHT = 1.5;
@@ -17,19 +17,13 @@ export function updateThirdPersonCamera(
     // Update yaw/pitch from right stick input (mouse delta or controller input)
     let rightStick = controls.right_stick_input;
     currentYaw += rightStick.x * MOUSE_SENSITIVITY_X;
-    currentPitch += rightStick.y * MOUSE_SENSITIVITY_Y;
+    currentPitch -= rightStick.y * MOUSE_SENSITIVITY_Y;
 
     // Clamp pitch to prevent over-rotation
     currentPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, currentPitch));
     // Wrap yaw to keep it in [0, 2π] range
     currentYaw = currentYaw % (2 * Math.PI);
     if (currentYaw < 0) currentYaw += 2 * Math.PI;
-
-    const lookDir = new Vec3(
-        Math.sin(currentYaw) * Math.cos(currentPitch),
-        -Math.sin(currentPitch),
-        Math.cos(currentYaw) * Math.cos(currentPitch)
-    );
 
     // Convert yaw/pitch to quaternion (YXZ euler order)
     let cy = Math.cos(currentYaw * 0.5);
@@ -38,21 +32,24 @@ export function updateThirdPersonCamera(
     let sp = Math.sin(currentPitch * 0.5);
 
     // Quaternion from YXZ Euler angles (left-handed Y-up)
-    const rotationQuat = new Quat(
-        sp * cy,      // x
-        sy * cp,      // y
-        -sy * sp,     // z (left-handed adjustment)
-        cy * cp       // w
-    );
-    world.setRotation(cameraEntityId, rotationQuat);
+    const rotationQuat = Quat.fromYawPitch(currentYaw, currentPitch);
+    const forward = rotationQuat.forward();
 
     const playerPos = world.getPosition(playerEntityId);
-    const cameraPos = new Vec3(
-        playerPos.x - lookDir.x * CAMERA_DISTANCE,
-        playerPos.y - lookDir.y * CAMERA_DISTANCE + CAMERA_HEIGHT,
-        playerPos.z - lookDir.z * CAMERA_DISTANCE
-    );
-    world.setPosition(cameraEntityId, cameraPos);
+    const cameraPos = {
+        x: playerPos.x - forward.x * CAMERA_DISTANCE,
+        y: playerPos.y - forward.y * CAMERA_DISTANCE + CAMERA_HEIGHT,
+        z: playerPos.z - forward.z * CAMERA_DISTANCE,
+    };
+
+    world.setCamera(cameraEntityId, {
+        position: cameraPos,
+        rotation: rotationQuat,
+        fov_y: 60,
+        z_near: 0.1,
+        z_far: 1000
+    });
+
 
     // Return updated yaw/pitch values so they can be stored in state
     return { yaw: currentYaw, pitch: currentPitch };
