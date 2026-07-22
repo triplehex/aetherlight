@@ -11,7 +11,7 @@
     "deploy": "npm run build && aether deploy ./storage/aetherlight aetherlight https://aetherlight.io/api/"
   },
   "dependencies": {
-    "@triplehex/aether": "0.1.10",
+    "@triplehex/aether": "0.1.11",
     "simplex-noise": "^4.0.1",
     "seedrandom": "^3.0.5"
   },
@@ -19,7 +19,7 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "@triplehex/aether-cli": "0.1.10",
+    "@triplehex/aether-cli": "0.1.11",
     "esbuild": "^0.21.0"
   }
 }

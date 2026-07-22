@@ -1,5 +1,7 @@
 import { ScriptWorld, ScriptModule, AssetLoader, Vec3 as AVec3, Quat as AQuat, CollisionResult } from '@triplehex/aether';
-import { Vec3, Quat, Mat4 } from './math';
+import { Vec3, Quat, Mat4 } from './math.ts';
+
+import { Portal } from './portal.ts';
 
 // EDITOR CLIENT SKELETON
 // This replaces the previous gameplay-oriented client with an editor-focused module.
@@ -9,55 +11,52 @@ import { Vec3, Quat, Mat4 } from './math';
 // Placeable catalog item description
 interface PlaceableCatalogItem {
     name: string;
-    modelPath: string;     // Path to the glTF/GLB asset
-    modelId?: string;      // Loaded ID returned from loader
     halfHeight: number;    // For ground placement offset
-    defaultRotation?: AQuat;
+    model: string;      // Loaded ID returned from loader
+    script?: ScriptModule; // Optional script
 }
 
 type EditorMode = 'Idle' | 'Placement' | 'TransformTranslate' | 'TransformRotate' | 'TransformScale';
 
-interface EditorInternalState {
+export class EditorState {
     yaw: number;
     pitch: number;
     mode: EditorMode; // 'Catalog' removed in favor of external UI selection
     activeCatalogIndex?: number; // mirrors external EditorControlsComponent.catalog_item
-    ghostEntity?: number;
-    selectedEntity?: number;
-    hoverEntity?: number;
+    ghostEntity?: string;
+    selectedEntity?: string;
+    hoverEntity?: string;
     prevFire: boolean;
     prevJump: boolean;
 }
 
-export class EditorClient extends ScriptModule {
+export class Editor extends ScriptModule {
     declare config: {
-        placeables: PlaceableCatalogItem[]; // catalog stored only in config now
+        placeables: PlaceableCatalogItem[];
     };
-    declare state: EditorInternalState;
+    declare state: EditorState;
 
     load(loader: AssetLoader): void {
         // Seed catalog with some sample models present in default project.
         // TODO: Expand / load descriptors from a JSON file when text loading is supported.
         this.config = {
             placeables: [
-                { name: 'Portal', modelPath: '/assets/models/portal.gltf', halfHeight: 1.5 },
-                { name: 'Rock', modelPath: '/assets/models/small_rock.glb', halfHeight: 0.0 },
+                {
+                    name: 'Portal',
+                    model: loader.loadGltf('/assets/models/portal.gltf'),
+                    halfHeight: 0.0,
+                    script: new Portal(loader),
+                },
+                {
+                    name: 'Rock',
+                    model: loader.loadGltf('/assets/models/small_rock.glb'),
+                    halfHeight: 0.0
+                },
             ]
         };
-
-        // Load models now; store returned IDs.
-        this.config.placeables.forEach(item => {
-            try {
-                item.modelId = loader.loadGltf(item.modelPath);
-            } catch (e) {
-                // If load fails, mark missing.
-                // TODO: Provide placeholder cube/sphere once primitive generation exists.
-                item.modelId = undefined;
-            }
-        });
     }
 
-    init(world: ScriptWorld, entityId: number): void {
+    init(world: ScriptWorld, entityId: string): void {
         world.setTag(entityId, 'Camera');
         world.setVelocity(entityId, new Vec3())
 
@@ -89,7 +88,7 @@ export class EditorClient extends ScriptModule {
         };
     }
 
-    update(world: ScriptWorld, entityId: number): void {
+    update(world: ScriptWorld, entityId: string): void {
         const controls = world.getEditorControls(entityId);
         const { firePressed, jumpPressed } = this.updateFlyCamera(world, entityId);
         const fireEdge = firePressed && !this.state.prevFire;
@@ -190,14 +189,14 @@ export class EditorClient extends ScriptModule {
         this.state.prevJump = jumpPressed;
     }
 
-    private ensureGhost(world: ScriptWorld): number | undefined {
+    private ensureGhost(world: ScriptWorld): string | undefined {
         const idx = this.state.activeCatalogIndex;
         if (idx === undefined) return;
         const item = this.config.placeables[idx];
-        if (!item || !item.modelId) return;
+        if (!item || !item.model) return;
         if (this.state.ghostEntity === undefined) {
             const ghost = world.spawn();
-            world.setModel(ghost, item.modelId);
+            world.setModel(ghost, item.model);
             world.setTag(ghost, 'Ghost');
             this.state.ghostEntity = ghost;
         }
@@ -212,7 +211,7 @@ export class EditorClient extends ScriptModule {
         }
     }
 
-    private castMouseRay(world: ScriptWorld, cameraId: number): CollisionResult | null {
+    private castMouseRay(world: ScriptWorld, cameraId: string): CollisionResult | null {
         const mouseRay = this.computeMouseRay(world, cameraId);
 
         let origin: Vec3;
@@ -237,7 +236,7 @@ export class EditorClient extends ScriptModule {
         )
     }
 
-    private updatePlacementGhost(world: ScriptWorld, cameraId: number) {
+    private updatePlacementGhost(world: ScriptWorld, cameraId: string) {
         const ghostId = this.ensureGhost(world);
         if (ghostId === undefined) return;
 
@@ -284,13 +283,22 @@ export class EditorClient extends ScriptModule {
         world.setRotation(ghostId, Quat.identity());
     }
 
-    private commitPlacement(world: ScriptWorld): number | undefined {
+    private commitPlacement(world: ScriptWorld): string | undefined {
+        const idx = this.state.activeCatalogIndex;
+        if (idx === undefined) return;
+
+        const item = this.config.placeables[idx];
+        if (!item) return;
+
         const ghostId = this.state.ghostEntity;
         if (ghostId === undefined) return undefined;
 
         // Finalize ghost as a placed selectable entity
         world.removeTag(ghostId, 'Ghost');
         world.setTag(ghostId, 'Selectable');
+        if (item.script) {
+            world.setScript(ghostId, item.script);
+        }
         this.state.selectedEntity = ghostId;
         this.state.ghostEntity = undefined;
 
@@ -307,7 +315,7 @@ export class EditorClient extends ScriptModule {
     }
 
     // Apply selection to entity (remove previous selection tag)
-    private applySelection(world: ScriptWorld, entityId: number) {
+    private applySelection(world: ScriptWorld, entityId: string) {
         if (this.state.selectedEntity === entityId) return; // already selected
         this.clearSelection(world);
         this.state.selectedEntity = entityId;
@@ -315,7 +323,7 @@ export class EditorClient extends ScriptModule {
     }
 
     // Ray pick among 'Selectable' entities by approximating them as unit spheres around position.
-    private pickSelectableUnderCursor(world: ScriptWorld, cameraId: number): number | undefined {
+    private pickSelectableUnderCursor(world: ScriptWorld, cameraId: string): string | undefined {
         const mouseRay = this.computeMouseRay(world, cameraId);
         if (!mouseRay) return undefined;
 
@@ -324,10 +332,10 @@ export class EditorClient extends ScriptModule {
 
         // Retrieve selectable entities (engine op returns list of ids)
         const list: any = (world as any).taggedEntities?.('Selectable');
-        const entities: number[] = list?.entities || list || [];
+        const entities: string[] = list?.entities || list || [];
         if (!entities.length) return undefined;
 
-        let best: { id: number; t: number } | undefined;
+        let best: { id: string; t: number } | undefined;
         const RADIUS = 1.0; // heuristic picking radius
         const R2 = RADIUS * RADIUS;
 
@@ -354,7 +362,7 @@ export class EditorClient extends ScriptModule {
         return { x: 0, y: 0, z: 1 };
     }
 
-    private computeMouseRay(world: ScriptWorld, cameraId: number) {
+    private computeMouseRay(world: ScriptWorld, cameraId: string) {
         const controls: any = (world as any).getEditorControls(cameraId);
         if (!controls) return undefined;
 
@@ -413,7 +421,7 @@ export class EditorClient extends ScriptModule {
 
 
     // Minimal fly camera. Returns interaction edges used by editor state machine.
-    private updateFlyCamera(world: ScriptWorld, entityId: number) {
+    private updateFlyCamera(world: ScriptWorld, entityId: string) {
         const controls: any = (world as any).getEditorControls(entityId);
 
         // Tunables
@@ -485,7 +493,7 @@ export class EditorClient extends ScriptModule {
         // Push camera settings (if API available)
         const camPos = world.getPosition(entityId) as AVec3;
         const camRot = world.getRotation(entityId) as AQuat;
-        (world as any).setCamera?.(entityId, {
+        world.setCamera(entityId, {
             position: camPos,
             rotation: camRot,
             fov_y: 60,
@@ -500,7 +508,7 @@ export class EditorClient extends ScriptModule {
         return { firePressed, jumpPressed };
     }
 
-    private setHovered(world: ScriptWorld, entityId: number | undefined) {
+    private setHovered(world: ScriptWorld, entityId: string | undefined) {
         if (this.state.hoverEntity !== entityId) {
             if (this.state.hoverEntity !== undefined) {
                 world.removeTag(this.state.hoverEntity, 'Hovered');

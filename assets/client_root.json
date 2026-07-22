@@ -62,16 +62,14 @@
                 "max_log_luminance": 2.0,
                 "tone_mapping_target_luminance": 0.2,
                 "max_bloom_iterations": 16,
-                "bloom_intensity": 0.2
+                "bloom_intensity": 0.2,
+                "bloom_kernel_blend_constants": []
             },
 
             "bloom_pre_filter" : "/assets/shaders/bloom_pre_filter.wgsl",
             "bloom_upsample" : "/assets/shaders/bloom_upsample.wgsl",
             "bloom_downsample" : "/assets/shaders/bloom_downsample.wgsl",
-            "tone_mapping" : "/assets/shaders/tone_mapping.wgsl",
-
-            "bloom_kernel_blend_constants": [
-            ]
+            "tone_mapping" : "/assets/shaders/tone_mapping.wgsl"
         }
     },
 

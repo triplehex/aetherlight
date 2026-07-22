@@ -1,12 +1,10 @@
 import { ScriptWorld, ScriptModule, AssetLoader, StateDB } from '@triplehex/aether';
-import { EditorClient } from './editor';
-import { Client } from './client';
-import { Quat, Vec3 } from './math';
-import { generateTerrain, spawnTerrainChunks } from './terrain';
+import { Client } from './client.ts';
+import { Quat, Vec3 } from './math.ts';
+import { generateTerrain, spawnTerrainChunks } from './terrain.ts';
 
 export default class Aetherlight extends ScriptModule {
     declare config: {
-        editorScript: EditorClient,
         clientScript: Client,
         portalModel: string,
         rockModel: string,
@@ -19,7 +17,6 @@ export default class Aetherlight extends ScriptModule {
 
     load(loader: AssetLoader): void {
         this.config = {
-            editorScript: new EditorClient(loader),
             clientScript: new Client(loader),
             portalModel: loader.loadGltf("/assets/models/portal.gltf"),
             rockModel: loader.loadGltf("/assets/models/small_rock.glb"),
@@ -33,16 +30,19 @@ export default class Aetherlight extends ScriptModule {
         };
     }
 
-    init(world: ScriptWorld, entityId: number): void {
+    init(world: ScriptWorld, entityId: string): void {
         this.state = {
             clientPositions: this.config.clientPositions,
         };
+
+        this.generateTerrain(world);
     }
 
-    update(world: ScriptWorld, entityId: number): void {
-        world.taggedEntities('NewEditor').forEach(entityId => {
-            world.setScript(entityId, this.config.editorScript);
-            world.removeTag(entityId, 'NewEditor');
+    update(world: ScriptWorld, entityId: string): void {
+        world.taggedEntities('NewClient').forEach(entityId => {
+            console.log(`[Aetherlight] Found NewClient entity ${entityId}, assigning client script`);
+            world.setScript(entityId, this.config.clientScript);
+            world.removeTag(entityId, 'NewClient');
             world.setTag(entityId, 'Client');
 
             let tags = world.getAllTags(entityId);
@@ -53,15 +53,18 @@ export default class Aetherlight extends ScriptModule {
                         let client = this.state.clientPositions[clientId];
                         world.setPosition(entityId, client.pos);
                         world.setRotation(entityId, Quat.fromYawPitch(client.yaw, client.pitch));
+                    } else {
+                        // New client with no saved position, spawn at default
+                        world.setPosition(entityId, { x: 64.0, y: 40.0, z: 64.0 });
+                        world.setRotation(entityId, Quat.identity());
+                        this.state.clientPositions[clientId] = {
+                            pos: { x: 64.0, y: 40.0, z: 64.0 },
+                            yaw: 0,
+                            pitch: 0
+                        };
                     }
                 }
             });
-        });
-
-        world.taggedEntities('NewPlayer').forEach(entityId => {
-            world.setScript(entityId, this.config.clientScript);
-            world.removeTag(entityId, 'NewPlayer');
-            world.setTag(entityId, 'Client');
         });
 
         world.taggedEntities('Client').forEach(entityId => {
@@ -87,6 +90,14 @@ export default class Aetherlight extends ScriptModule {
                 }
             });
         });
+    }
+
+    generateTerrain(world: ScriptWorld) {
+        let newTerrain = generateTerrain(192, 192, Math.random() * 100000);
+        let terrain_height = newTerrain.heightmap;
+        let terrain_splat = newTerrain.splatmap;
+
+        spawnTerrainChunks(world, terrain_height, terrain_splat, 192, 192, this.config.terrainMaterial);
     }
 
     saveState(world: ScriptWorld, db: StateDB): void {

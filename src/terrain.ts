@@ -1,11 +1,11 @@
 import { ScriptWorld } from "@triplehex/aether";
-import { Vec2 } from "./math";
-import { runTerrainGen } from './terrain/generator';
-import { BiomeDefinition, TerrainGenConfig } from './terrain/types';
-import { BiomeControl } from './terrain/biome_map';
-import { FloodWalker } from './terrain/walker';
-import { blurSplats } from "./terrain/splat";
-export type { BiomeWeight } from './terrain/types';
+import { Vec2 } from "./math.ts";
+import { runTerrainGen } from './terrain/generator.ts';
+import { BiomeDefinition, TerrainGenConfig } from './terrain/types.ts';
+import { BiomeControl } from './terrain/biome_map.ts';
+import { FloodWalker } from './terrain/walker.ts';
+import { blurSplats } from "./terrain/splat.ts";
+export type { BiomeWeight } from './terrain/types.ts';
 
 
 const CHUNK_WIDTH = 16;
@@ -159,7 +159,6 @@ export function generateTerrain(width: number, height: number, seed: string | nu
 export function spawnTerrainChunks(world: ScriptWorld, heightmap: Float32Array, splatmap: Uint8Array, width: number, height: number, material: string[]) {
     let chunksX = Math.ceil(width / CHUNK_WIDTH);
     let chunksY = Math.ceil(height / CHUNK_WIDTH);
-
 
     for (let x = 0; x < chunksX; x++) {
         for (let y = 0; y < chunksY; y++) {

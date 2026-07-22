@@ -32,6 +32,8 @@ struct IBLDataBlock {
 @group(0) @binding(4) var u_GGXEnvSampler: texture_cube<f32>;
 @group(0) @binding(5) var u_GGXLUT: texture_2d<f32>;
 @group(0) @binding(6) var u_LinearSampler: sampler;
+@group(0) @binding(7) var shadow_map: texture_depth_2d_array;
+@group(0) @binding(8) var shadow_sampler: sampler_comparison;
 
 struct MaterialFactors {
     base_color: vec4<f32>,
@@ -80,12 +82,10 @@ var<private> g_splatFactors: vec4<f32>;
     @group(1) @binding(5) var u_EmissiveSampler: texture_2d<f32>;
 #endif
 
-@group(3) @binding(0) var shadow_map: texture_depth_2d_array;
-@group(3) @binding(1) var shadow_sampler: sampler_comparison;
 struct LightBlock {
     lights: array<Light, MAX_LIGHTS>,
 };
-@group(3) @binding(2) var<uniform> u_Lights: LightBlock;
+@group(3) @binding(0) var<uniform> u_Lights: LightBlock;
 
 #include <functions.wgsl>
 #include <textures.wgsl>

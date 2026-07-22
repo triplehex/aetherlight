@@ -8,7 +8,7 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				1
+				2
 			]
 		}
 	],
@@ -34,8 +34,16 @@
 			]
 		},
 		{
+			"extras":{
+				"portal":true
+			},
+			"mesh":1,
+			"name":"portal"
+		},
+		{
 			"children":[
-				0
+				0,
+				1
 			],
 			"name":"ROOT"
 		}
@@ -69,6 +77,19 @@
 					},
 					"indices":3,
 					"material":0
+				}
+			]
+		},
+		{
+			"name":"Plane",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":4,
+						"NORMAL":5,
+						"TEXCOORD_0":6
+					},
+					"indices":7
 				}
 			]
 		}
@@ -138,6 +159,40 @@
 			"componentType":5123,
 			"count":2460,
 			"type":"SCALAR"
+		},
+		{
+			"bufferView":4,
+			"componentType":5126,
+			"count":12,
+			"max":[
+				-0.0003577997849788517,
+				2.95706844329834,
+				1
+			],
+			"min":[
+				-0.00035793098504655063,
+				0,
+				-1.4321986436843872
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":5,
+			"componentType":5126,
+			"count":12,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":6,
+			"componentType":5126,
+			"count":12,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":7,
+			"componentType":5123,
+			"count":24,
+			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
@@ -164,6 +219,30 @@
 			"byteLength":4920,
 			"byteOffset":23200,
 			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":144,
+			"byteOffset":28120,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":144,
+			"byteOffset":28264,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":96,
+			"byteOffset":28408,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":48,
+			"byteOffset":28504,
+			"target":34963
 		}
 	],
 	"samplers":[
@@ -174,7 +253,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":28120,
+			"byteLength":28552,
 			"uri":"portal.bin"
 		}
 	]

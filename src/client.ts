@@ -1,51 +1,84 @@
-import { ScriptWorld, ScriptModule, AssetLoader } from '@triplehex/aether';
-import { Vec3, Quat } from './math';
-import { updateThirdPersonCamera } from './camera';
-import { Player } from './player';
+import { ScriptWorld, ScriptModule, AssetLoader, EditorControlsState } from '@triplehex/aether';
+import { Editor, EditorState } from './editor.ts';
+import { PlayerCamera, PlayerCameraState } from './player_camera.ts';
 
 export class Client extends ScriptModule {
     declare config: {
-        playerScript: Player,
+        editor: Editor,
+        playerCamera: PlayerCamera,
     };
     declare state: {
-        id: number,
-        yaw: number,
-        pitch: number
+        editor: EditorState | null,
+        playerCamera: PlayerCameraState | null,
     };
 
     load(loader: AssetLoader): void {
+        // Prepare both editor catalog and gameplay player script; whichever path used will initialize further.
         this.config = {
-            playerScript: new Player(loader)
-        };
+            editor: new Editor(loader),
+            playerCamera: new PlayerCamera(loader),
+        }
     }
 
-    init(world: ScriptWorld, entityId: number): void {
-        let playerId = world.spawn();
-        world.setScript(playerId, this.config.playerScript);
+    init(world: ScriptWorld, entityId: string): void {
         world.setTag(entityId, 'Camera');
-        world.setTag(entityId, 'Camera-' + String(playerId));
+        this.state = {
+            editor: null,
+            playerCamera: null,
+        };
 
-        // Initialize camera entity with default position and rotation
-        world.setPosition(entityId, new Vec3(0, 5, -10)); // Default camera position
-        world.setRotation(entityId, new Quat(0., 0., 0., 1.)); // Default rotation (identity quaternion)
 
-        this.state = { id: playerId, yaw: 0, pitch: 0 };
+        this.initializeState(world, entityId);
     }
 
-    update(world: ScriptWorld, entityId: number): void {
-        let controls = world.getClientControls(entityId);
+    update(world: ScriptWorld, entityId: string): void {
+        let mode = this.initializeState(world, entityId);
 
-        let cameraResult = updateThirdPersonCamera(
-            world,
-            entityId,
-            this.state.id,
-            this.state.yaw,
-            this.state.pitch,
-            controls
-        );
-
-        // Update state with new yaw/pitch values
-        this.state.yaw = cameraResult.yaw;
-        this.state.pitch = cameraResult.pitch;
+        if (mode == ControlsMode.Editor) {
+            this.config.editor.state = this.state.editor;
+            this.config.editor.update(world, entityId);
+            this.state.editor = this.config.editor.state;
+        } else if (mode == ControlsMode.Client) {
+            this.config.playerCamera.state = this.state.playerCamera;
+            this.config.playerCamera.update(world, entityId);
+            this.state.playerCamera = this.config.playerCamera.state;
+        }
     }
+
+    private initializeState(world: ScriptWorld, entityId: string): ControlsMode {
+        // Detect editor vs gameplay availability by probing controls.
+        var editorControls;
+        var mode = ControlsMode.None;
+        try {
+            editorControls = world.getEditorControls(entityId);
+            mode = ControlsMode.Editor;
+        } catch (e) {
+            editorControls = null;
+        };
+        var clientControls;
+        try {
+            clientControls = world.getClientControls(entityId);
+            mode = ControlsMode.Client;
+        } catch (e) {
+            clientControls = null;
+        };
+
+
+        if (editorControls && !this.state.editor) {
+            this.config.editor.init(world, entityId);
+            this.state.editor = this.config.editor.state;
+        } else if (clientControls && !this.state.playerCamera) {
+            this.config.playerCamera.init(world, entityId);
+            console.log(this.config.playerCamera.state);
+            this.state.playerCamera = this.config.playerCamera.state;
+        }
+
+        return mode;
+    }
+}
+
+enum ControlsMode {
+    None,
+    Editor,
+    Client,
 }
