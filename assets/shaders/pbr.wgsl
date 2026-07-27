@@ -14,8 +14,11 @@ struct ViewDataBlock {
     shadow_thresholds: vec3<f32>,
     shadow_bias: vec3<f32>,
     camera: vec3<f32>,
+    // crevice pads the vec3 above out to 16 bytes, as with MaterialFactors
+    _pad: f32,
     exposure: f32,
     alphaCutoff: f32,
+    time: f32,
 }
 @group(0) @binding(1) var<uniform> u_View: ViewDataBlock;
 
