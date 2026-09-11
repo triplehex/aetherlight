@@ -50,7 +50,7 @@ export class Vec3 implements AetherVec3 {
     constructorCopy(): Vec3 { return new Vec3(this.x, this.y, this.z); }
     clone() { return new Vec3(this.x, this.y, this.z); }
     add(v: Vec3) { return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z); }
-    sub(v: Vec3) { return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z); }
+    sub(v: {x: number, y: number, z: number}) { return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z); }
     scale(s: number) { return new Vec3(this.x * s, this.y * s, this.z * s); }
     dot(v: Vec3) { return this.x * v.x + this.y * v.y + this.z * v.z; }
     cross(v: Vec3) {
@@ -84,6 +84,42 @@ export class Quat implements AetherQuat {
         const cy = Math.cos(yaw * 0.5), sy = Math.sin(yaw * 0.5);
         const cp = Math.cos(pitch * 0.5), sp = Math.sin(pitch * 0.5);
         return new Quat(sp * cy, -sy * cp, sy * sp, cy * cp);
+    }
+    static lookAt(dir: Vec3, up = new Vec3(0, 1, 0)): Quat {
+        const z = dir.normalize().scale(-1); // camera space -Z
+        const x = up.cross(z).normalize();
+        const y = z.cross(x).normalize();
+        const m00 = x.x, m01 = y.x, m02 = z.x;
+        const m10 = x.y, m11 = y.y, m12 = z.y;
+        const m20 = x.z, m21 = y.z, m22 = z.z;
+        const trace = m00 + m11 + m22;
+        let qw, qx, qy, qz;
+        if (trace > 0) {
+            const s = 0.5 / Math.sqrt(trace + 1.0);
+            qw = 0.25 / s;
+            qx = (m21 - m12) * s;
+            qy = (m02 - m20) * s;
+            qz = (m10 - m01) * s;
+        } else if (m00 > m11 && m00 > m22) {
+            const s = 2.0 * Math.sqrt(1.0 + m00 - m11 - m22);
+            qw = (m21 - m12) / s;
+            qx = 0.25 * s;
+            qy = (m01 + m10) / s;
+            qz = (m02 + m20) / s;
+        } else if (m11 > m22) {
+            const s = 2.0 * Math.sqrt(1.0 + m11 - m00 - m22);
+            qw = (m02 - m20) / s;
+            qx = (m01 + m10) / s;
+            qy = 0.25 * s;
+            qz = (m12 + m21) / s;
+        } else {
+            const s = 2.0 * Math.sqrt(1.0 + m22 - m00 - m11);
+            qw = (m10 - m01) / s;
+            qx = (m02 + m20) / s;
+            qy = (m12 + m21) / s;
+            qz = 0.25 * s;
+        }
+        return new Quat(qx, qy, qz, qw);
     }
 
     mul(q: Quat) { // this * q

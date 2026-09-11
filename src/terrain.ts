@@ -1,197 +1,121 @@
 import { ScriptWorld } from "@triplehex/aether";
-import { Vec2 } from "./math.ts";
-import { runTerrainGen } from './terrain/generator.ts';
-import { BiomeDefinition, TerrainGenConfig } from './terrain/types.ts';
-import { BiomeControl } from './terrain/biome_map.ts';
-import { FloodWalker } from './terrain/walker.ts';
-import { blurSplats } from "./terrain/splat.ts";
-export type { BiomeWeight } from './terrain/types.ts';
+import { Vec2, Vec3, Quat } from "./math.ts";
+import { generateWorld, GeneratedWorld, Pad } from './terrain/generator.ts';
+import { pickTheme, ShardTheme } from './terrain/themes.ts';
+import { CHUNK_WIDTH, GATES, MAP_SIZE, PAD_FALLOFF, PAD_RADIUS } from './world.ts';
 
+export type { GeneratedWorld } from './terrain/generator.ts';
+export type { ShardTheme } from './terrain/themes.ts';
 
-const CHUNK_WIDTH = 16;
+/** How many props one shard may spawn, whatever its theme asks for. */
+const PROP_LIMIT = 320;
 
-const BIOMES: BiomeDefinition[] = [
-    {
-        name: 'Ocean',
-        weight: 1.,
-        height_offset: -2.,
-        height: {
-            fbmFrequency: 0.01,
-            fbmOctaves: 3,
-            fbmGain: 0.5,
-            fbmLacunarity: 2.0,
-            amplitude: 0.
-        },
-        splatFn: ({ height, slope }) => {
+/**
+ * Build this shard's world.
+ *
+ * The seed decides the theme as well as the terrain, so two shards with
+ * different seeds are different countries and two with the same seed are the
+ * same country down to the rubble.
+ */
+export function generateShardWorld(seed: string | number): GeneratedWorld & { theme: ShardTheme } {
+    const theme = pickTheme(seed);
 
-            return { sand: 1. - slope, };
-        }
-    },
-    {
-        name: 'Plains',
-        weight: 1,
-        height_offset: 2.,
-        height: {
-            fbmFrequency: 0.01,
-            fbmOctaves: 5,
-            fbmGain: 0.5,
-            fbmLacunarity: 2.05,
-            amplitude: 12.,
-        },
-        splatFn: ({ height, slope }) => {
-            let dirt = Math.min(slope / 1., 1.);
-            return { grass: 1. - dirt, dirt }
-        }
-    },
-    {
-        name: 'Mountains',
-        weight: 2.,
-        height: {
-            fbmFrequency: 0.02,
-            fbmOctaves: 4,
-            fbmGain: 0.5,
-            fbmLacunarity: 2.,
-            amplitude: 60.0
-        },
-        splatFn: ({ height, slope }) => {
-            return { rock: 3. };
-        }
-    },
-    {
-        name: 'Beach',
-        weight: 1.,
-        height_offset: 2.,
-        height: {
-            fbmFrequency: 0.0001,
-            fbmOctaves: 1,
-            fbmGain: 0.5,
-            fbmLacunarity: 2.0,
-            amplitude: 1.
-        },
-        splatFn: ({ height, slope }) => {
+    // A levelled clearing under each portal. Everything placed by a script —
+    // the spawn, the doorways — is written against fixed coordinates, so the
+    // ground under them has to be fixed too however the rest of the map came
+    // out.
+    const pads: Pad[] = GATES.map(gate => ({
+        x: gate.position.x,
+        z: gate.position.z,
+        radius: PAD_RADIUS,
+        falloff: PAD_FALLOFF,
+        height: gate.position.y,
+    }));
 
-            return { sand: 1. };
-        }
-    },
-];
-
-export function biomeGrid(width: number, height: number, scale: number, seed: string | number = 1) {
-    const walker = new FloodWalker(width, height, scale, seed);
-
-    // 0: ocean (background)
-    walker.fillAll(0);
-
-    // 1: ground
-    let center = new Vec2(width / 2., height / 2.);
-    let filled = walker.placeSeedAndWalk({
-        x: center.x,
-        y: center.y,
-        biome: 1,
-        max: 0.35,
-        walkable: new Set([0]),
-        stepDecay: 0.0,
-        diagonal: false
+    const world = generateWorld({
+        seed,
+        size: MAP_SIZE,
+        chunkWidth: CHUNK_WIDTH,
+        biomes: theme.biomes,
+        elevation: theme.elevation,
+        seaLevel: theme.seaLevel,
+        climate: theme.climate,
+        erosion: theme.erosion,
+        landmarks: theme.landmarks,
+        propBudget: Math.min(theme.propBudget ?? 240, PROP_LIMIT),
+        pads,
     });
 
-    // Choose a random existing ground cell to seed mountains (biome 2)
-    // Fallback to center if none found (should be rare if groundFill > 0)
-
-    for (let attempts = 0; attempts < 200; attempts++) {
-        center = walker.randomPos();
-        if (walker.get(center.x, center.y) === 1) {
-            break;
-        }
-    }
-
-    // 2: mountains (replace ground only)
-    let filledMountain = walker.placeSeedAndWalk({
-        x: center.x,
-        y: center.y,
-        biome: 2,
-        max: 0.05,
-        walkable: new Set([1]),
-        diagonal: true,
-    });
-
-    // 3: replace some ground with beach near ocean
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-            if (walker.get(x, y) === 0) { // ocean
-                const neighbors = walker.getNeighbors(x, y);
-                for (const n of neighbors) {
-                    if (walker.get(n.x, n.y) === 1) {
-                        walker.set(n.x, n.y, 3); // beach
-                        walker.set(x, y, 3);
-                    }
-                }
-            }
-        }
-    }
-
-    return walker;
+    return { ...world, theme };
 }
 
-export function generateTerrain(width: number, height: number, seed: string | number = 1) {
-    const biomeMapScale = 4; // control cell size
-    const controlWidth = Math.ceil(width / biomeMapScale);
-    const controlHeight = Math.ceil(height / biomeMapScale);
+/**
+ * Hand the generated map to the engine, one chunk entity per 16x16 metres.
+ *
+ * A chunk is meshed against its neighbours, so the flags have to say exactly
+ * which sides have one: claiming a neighbour that does not exist makes the
+ * engine hold the chunk back forever waiting for it to arrive, and denying one
+ * that does leaves a seam. North is +z and east is +x, matching the engine.
+ */
+export function spawnTerrainChunks(world: ScriptWorld, generated: GeneratedWorld, material: string[]): void {
+    const { size, heightmap, splatmap, grassmap, chunksPerSide, grassOptions } = generated;
+    const area = CHUNK_WIDTH * CHUNK_WIDTH;
 
-    const walker = biomeGrid(controlWidth, controlHeight, biomeMapScale, seed);
+    for (let cz = 0; cz < chunksPerSide; cz++) {
+        for (let cx = 0; cx < chunksPerSide; cx++) {
+            const chunkHeight = new Float32Array(area);
+            const chunkSplat = new Uint8Array(area);
+            const chunkGrass = new Uint8Array(area);
 
-
-    const biomeMap = BiomeControl.fromIndexGrid(walker.getGrid(), controlWidth, controlHeight, biomeMapScale);
-
-
-    biomeMap.blur(1, 1);
-
-    const config: TerrainGenConfig = {
-        width,
-        height,
-        biomes: BIOMES,
-        biomeControlMap: biomeMap as any,
-        seed
-    };
-
-    let { heightmap, splatmap } = runTerrainGen(config);
-    return { heightmap, splatmap };
-}
-
-export function spawnTerrainChunks(world: ScriptWorld, heightmap: Float32Array, splatmap: Uint8Array, width: number, height: number, material: string[]) {
-    let chunksX = Math.ceil(width / CHUNK_WIDTH);
-    let chunksY = Math.ceil(height / CHUNK_WIDTH);
-
-    for (let x = 0; x < chunksX; x++) {
-        for (let y = 0; y < chunksY; y++) {
-            let chunk_heightmap = new Float32Array(CHUNK_WIDTH * CHUNK_WIDTH);
-            let chunk_splatmap = new Uint8Array(CHUNK_WIDTH * CHUNK_WIDTH);
-            for (let cy = 0; cy < CHUNK_WIDTH; cy++) {
-                for (let cx = 0; cx < CHUNK_WIDTH; cx++) {
-                    let wx = x * CHUNK_WIDTH + cx;
-                    let wy = y * CHUNK_WIDTH + cy;
-                    if (wx < width && wy < height) {
-                        let widx = wy * width + wx;
-                        let cidx = cy * CHUNK_WIDTH + cx;
-                        chunk_heightmap[cidx] = heightmap[widx];
-                        chunk_splatmap[cidx] = splatmap[widx];
-                    }
+            for (let z = 0; z < CHUNK_WIDTH; z++) {
+                for (let x = 0; x < CHUNK_WIDTH; x++) {
+                    const wx = cx * CHUNK_WIDTH + x;
+                    const wz = cz * CHUNK_WIDTH + z;
+                    if (wx >= size || wz >= size) continue;
+                    const from = wz * size + wx;
+                    const to = z * CHUNK_WIDTH + x;
+                    chunkHeight[to] = heightmap[from];
+                    chunkSplat[to] = splatmap[from];
+                    chunkGrass[to] = grassmap[from];
                 }
             }
-            let neighbors = {
-                north: y < (chunksY) ? true : false,
-                south: y > 0 ? true : false,
-                west: x < (chunksX - 1) ? true : false,
-                east: x > 0 ? true : false
-            };
-            let e = world.spawn();
-            world.setTerrainChunk(e, {
-                position: new Vec2(x, y),
-                heightmap: chunk_heightmap,
-                splatmap: chunk_splatmap,
-                neighbors,
+
+            const entity = world.spawn();
+            world.setTerrainChunk(entity, {
+                position: new Vec2(cx, cz),
+                heightmap: chunkHeight,
+                splatmap: chunkSplat,
+                grassmap: chunkGrass,
+                grassOptions: grassOptions[cz * chunksPerSide + cx],
+                neighbors: {
+                    north: cz < chunksPerSide - 1,
+                    south: cz > 0,
+                    east: cx < chunksPerSide - 1,
+                    west: cx > 0,
+                },
                 material,
             });
-            world.setTag(e, 'TerrainChunk');
+            world.setTag(entity, 'TerrainChunk');
         }
     }
+}
 
+/**
+ * Stand the scattered geometry on the finished ground.
+ *
+ * These carry no script: they are placed once and then cost nothing but their
+ * replication, which is what lets there be a few hundred of them. A prop is
+ * sunk slightly into the surface so that the ground meets it rather than the
+ * other way round.
+ */
+export function spawnProps(world: ScriptWorld, generated: GeneratedWorld, model: string): number {
+    for (const prop of generated.props) {
+        const entity = world.spawn();
+        world.setModel(entity, model);
+        world.setPosition(entity, new Vec3(prop.x, prop.y - prop.scale * 0.08, prop.z));
+        world.setRotation(entity, Quat.fromYawPitch(prop.yaw, 0));
+        world.setScale(entity, new Vec3(prop.scale, prop.scale, prop.scale));
+        world.setTag(entity, prop.landmark ? 'Landmark' : 'Scatter');
+    }
+    return generated.props.length;
 }

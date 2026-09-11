@@ -74,6 +74,7 @@
     },
 
     "water_texture": "/assets/terrain/water.json",
+    "water_height": 0.0,
 
     "render_debug": "None"
 }
