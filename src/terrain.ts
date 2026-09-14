@@ -50,52 +50,71 @@ export function generateShardWorld(seed: string | number): GeneratedWorld & { th
 }
 
 /**
- * Hand the generated map to the engine, one chunk entity per 16x16 metres.
+ * Hand the generated map to the engine as a pyramid of chunks.
  *
- * A chunk is meshed against its neighbours, so the flags have to say exactly
- * which sides have one: claiming a neighbour that does not exist makes the
- * engine hold the chunk back forever waiting for it to arrive, and denying one
- * that does leaves a seam. North is +z and east is +x, matching the engine.
+ * Level 0 is one chunk entity per 16x16 metres at full detail. Every level
+ * above holds the same 16x16 samples spread twice as far apart, so one level 1
+ * chunk covers four level 0 chunks, and the pyramid stops at the level where a
+ * single chunk covers the map. The engine sends each player the level that
+ * suits how far they are from the ground; only level 0 collides.
+ *
+ * A chunk is meshed against whatever covers the ground past its edges, so the
+ * flags only have to say which sides the world continues past: denying one that
+ * does leaves a seam. North is +z and east is +x, matching the engine.
  */
 export function spawnTerrainChunks(world: ScriptWorld, generated: GeneratedWorld, material: string[]): void {
     const { size, heightmap, splatmap, grassmap, chunksPerSide, grassOptions } = generated;
     const area = CHUNK_WIDTH * CHUNK_WIDTH;
 
-    for (let cz = 0; cz < chunksPerSide; cz++) {
-        for (let cx = 0; cx < chunksPerSide; cx++) {
-            const chunkHeight = new Float32Array(area);
-            const chunkSplat = new Uint8Array(area);
-            const chunkGrass = new Uint8Array(area);
+    for (let lod = 0; ; lod++) {
+        const spacing = 1 << lod;
+        const perSide = Math.ceil(chunksPerSide / spacing);
 
-            for (let z = 0; z < CHUNK_WIDTH; z++) {
-                for (let x = 0; x < CHUNK_WIDTH; x++) {
-                    const wx = cx * CHUNK_WIDTH + x;
-                    const wz = cz * CHUNK_WIDTH + z;
-                    if (wx >= size || wz >= size) continue;
-                    const from = wz * size + wx;
-                    const to = z * CHUNK_WIDTH + x;
-                    chunkHeight[to] = heightmap[from];
-                    chunkSplat[to] = splatmap[from];
-                    chunkGrass[to] = grassmap[from];
+        for (let cz = 0; cz < perSide; cz++) {
+            for (let cx = 0; cx < perSide; cx++) {
+                const chunkHeight = new Float32Array(area);
+                const chunkSplat = new Uint8Array(area);
+                const chunkGrass = new Uint8Array(area);
+
+                for (let z = 0; z < CHUNK_WIDTH; z++) {
+                    for (let x = 0; x < CHUNK_WIDTH; x++) {
+                        // Point sampled, not averaged, so every coarse sample
+                        // lies exactly on a fine one and two levels agree
+                        // wherever they share a sample.
+                        const wx = Math.min((cx * CHUNK_WIDTH + x) * spacing, size - 1);
+                        const wz = Math.min((cz * CHUNK_WIDTH + z) * spacing, size - 1);
+                        const from = wz * size + wx;
+                        const to = z * CHUNK_WIDTH + x;
+                        chunkHeight[to] = heightmap[from];
+                        chunkSplat[to] = splatmap[from];
+                        chunkGrass[to] = grassmap[from];
+                    }
                 }
-            }
 
-            const entity = world.spawn();
-            world.setTerrainChunk(entity, {
-                position: new Vec2(cx, cz),
-                heightmap: chunkHeight,
-                splatmap: chunkSplat,
-                grassmap: chunkGrass,
-                grassOptions: grassOptions[cz * chunksPerSide + cx],
-                neighbors: {
-                    north: cz < chunksPerSide - 1,
-                    south: cz > 0,
-                    east: cx < chunksPerSide - 1,
-                    west: cx > 0,
-                },
-                material,
-            });
-            world.setTag(entity, 'TerrainChunk');
+                const grassX = Math.min(cx * spacing, chunksPerSide - 1);
+                const grassZ = Math.min(cz * spacing, chunksPerSide - 1);
+                const entity = world.spawn();
+                world.setTerrainChunk(entity, {
+                    position: new Vec2(cx, cz),
+                    lod,
+                    heightmap: chunkHeight,
+                    splatmap: chunkSplat,
+                    grassmap: chunkGrass,
+                    grassOptions: grassOptions[grassZ * chunksPerSide + grassX],
+                    neighbors: {
+                        north: cz < perSide - 1,
+                        south: cz > 0,
+                        east: cx < perSide - 1,
+                        west: cx > 0,
+                    },
+                    material,
+                });
+                world.setTag(entity, 'TerrainChunk');
+            }
+        }
+
+        if (perSide <= 1) {
+            return;
         }
     }
 }
@@ -111,10 +130,16 @@ export function spawnTerrainChunks(world: ScriptWorld, generated: GeneratedWorld
 export function spawnProps(world: ScriptWorld, generated: GeneratedWorld, model: string): number {
     for (const prop of generated.props) {
         const entity = world.spawn();
-        world.setModel(entity, model);
-        world.setPosition(entity, new Vec3(prop.x, prop.y - prop.scale * 0.08, prop.z));
-        world.setRotation(entity, Quat.fromYawPitch(prop.yaw, 0));
-        world.setScale(entity, new Vec3(prop.scale, prop.scale, prop.scale));
+        // Static, not the ordinary setters: an interpolated component is re-sent
+        // every tick, and a few hundred props would fill the update channel
+        // saying where they have always been.
+        world.setStaticModel(entity, model);
+        world.setStaticTransform(
+            entity,
+            new Vec3(prop.x, prop.y - prop.scale * 0.08, prop.z),
+            Quat.fromYawPitch(prop.yaw, 0),
+            new Vec3(prop.scale, prop.scale, prop.scale),
+        );
         world.setTag(entity, prop.landmark ? 'Landmark' : 'Scatter');
     }
     return generated.props.length;
