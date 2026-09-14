@@ -9,10 +9,11 @@
     "build": "npm run bundle && aether build . ./storage/aetherlight",
     "start": "npm run bundle && aether run .",
     "deploy": "npm run build && aether deploy ./storage/aetherlight aetherlight https://aetherlight.io/api/",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "preview": "esbuild tools/preview_world.ts --bundle --format=esm --platform=node --outfile=dist/preview_world.mjs && node dist/preview_world.mjs"
   },
   "dependencies": {
-    "@triplehex/aether": "file:../aetherengine/packages/aether-runtime",
+    "@triplehex/aether": "file:../packages/aether-runtime",
     "seedrandom": "^3.0.5",
     "simplex-noise": "^4.0.1"
   },
@@ -20,7 +21,7 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "@triplehex/aether-cli": "file:../aetherengine/packages/aether-cli",
+    "@triplehex/aether-cli": "file:../packages/aether-cli",
     "esbuild": "^0.21.0",
     "typescript": "^7.0.2"
   }
