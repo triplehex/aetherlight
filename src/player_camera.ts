@@ -1,12 +1,16 @@
 import { AssetLoader, ScriptModule, ScriptWorld } from '@triplehex/aether';
 import { Vec3, Quat } from './math.ts';
-import { GATES } from './world.ts';
+import {
+    FLIGHT_HEIGHT, FLIGHT_REACH, FLIGHT_START, FLIGHT_STEPS, GATES, SCRIPTED_PATH,
+} from './world.ts';
 
 export class PlayerCameraState {
     /// The entity this camera watches, handed to it when it was attached.
     targetId: string;
     yaw: number;
     pitch: number;
+    /// How far around the fixed flight this camera is; see `SCRIPTED_PATH`.
+    flightPhase: number;
 }
 
 /// Follows whatever it was pointed at when its player spawned it.
@@ -19,7 +23,7 @@ export class PlayerCamera extends ScriptModule {
         world.setTag(entityId, 'Camera');
         world.setPosition(entityId, new Vec3(0, 5, -10));
         world.setRotation(entityId, Quat.identity());
-        this.state = { targetId: params.target, yaw: 0, pitch: 0 };
+        this.state = { targetId: params.target, yaw: 0, pitch: 0, flightPhase: FLIGHT_START };
     }
 
     update(world: ScriptWorld, entityId: string): void {
@@ -44,6 +48,13 @@ export class PlayerCamera extends ScriptModule {
         }
         if (!playerPos) return;
 
+        // Before anything is read off the controls, so a flown camera needs
+        // nobody at the keyboard.
+        if (SCRIPTED_PATH) {
+            this.flyTheEight(world, entityId, playerPos);
+            return;
+        }
+
         var controls = world.getClientControls(entityId);
 
         // Update yaw/pitch from right stick input (mouse delta or controller)
@@ -66,6 +77,37 @@ export class PlayerCamera extends ScriptModule {
             y: playerPos.y - forward.y * CAMERA_DISTANCE + CAMERA_HEIGHT,
             z: playerPos.z - forward.z * CAMERA_DISTANCE,
         };
+
+        world.setPosition(entityId, cameraPos);
+        world.setRotation(entityId, rotationQuat);
+        world.setCamera(entityId, {
+            position: cameraPos,
+            rotation: rotationQuat,
+            fov_y: 40,
+            z_near: 0.1,
+            z_far: 1000
+        });
+    }
+
+    /// One step of the fixed flight around the first gate, looking at whoever
+    /// this camera watches. Placed outright, like the walk.
+    flyTheEight(world: ScriptWorld, entityId: string, playerPos: { x: number, y: number, z: number }): void {
+        this.state.flightPhase = (this.state.flightPhase + 1) % FLIGHT_STEPS;
+        const t = 2 * Math.PI * this.state.flightPhase / FLIGHT_STEPS;
+        const gate = GATES[0].position;
+
+        const cameraPos = {
+            x: gate.x + FLIGHT_REACH * Math.sin(2 * t) / 2,
+            y: FLIGHT_HEIGHT,
+            z: gate.z + FLIGHT_REACH * Math.sin(t),
+        };
+        // Nudged when camera and body all but stack: looking straight down
+        // leaves `lookAt` nothing to cross its up vector with.
+        const aim = new Vec3(playerPos).sub(cameraPos);
+        if (Math.hypot(aim.x, aim.z) < 1e-3) {
+            aim.z += 1e-3;
+        }
+        const rotationQuat = Quat.lookAt(aim);
 
         world.setPosition(entityId, cameraPos);
         world.setRotation(entityId, rotationQuat);

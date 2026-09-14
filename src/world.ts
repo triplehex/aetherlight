@@ -79,3 +79,52 @@ export const TICK_DT = 1.0 / 20.0;
 // deepest seabed any theme generates, so it catches walking off the map and
 // nothing else.
 export const FALL_LIMIT = -80;
+
+// Firing throws a rock at whatever the camera is pointed at. Walking a player
+// through a portal is fiddly to do repeatably; throwing a rock through one is
+// not, and a rock in flight is driven by nothing but its own position and
+// velocity — so it is the cleanest thing there is to watch a crossing with.
+export const ROCK_TAG = 'Rock';
+// Fast enough to reach a portal on a flat throw from the spawn.
+export const ROCK_SPEED = 6;
+// Ticks between throws, so that holding the button is a stream of rocks rather
+// than a wall of them.
+export const ROCK_COOLDOWN = 6;
+// Where a rock leaves the hand, relative to the thrower.
+export const ROCK_MUZZLE_HEIGHT = 1.2;
+export const ROCK_MUZZLE_REACH = 0.6;
+// A thrown rock arcs. Heavier than the player's gravity so the arc is short
+// enough to see the whole of it.
+export const ROCK_GRAVITY = new Vec3(0, -20, 0);
+// A rock that reaches this height has landed: the height of the clearings
+// rather than of the ground under it, so a rock thrown off a clearing lands a
+// little above where it should. Worth it: reading the ground would put the
+// terrain into an arc that is otherwise driven by position and velocity alone.
+export const ROCK_GROUND = PAD_HEIGHT + 0.15;
+
+// Set to walk the player and fly the camera along fixed paths through the first
+// gate, off a counter each keeps in its own script state, ignoring input and
+// collision alike. Input is the one part of a session a recording cannot replay
+// exactly, so a stutter that survives this is the engine's and not the
+// keyboard's. The engine's `scripts/portal/record.py` turns it on in its own
+// copy of the project.
+export const SCRIPTED_PATH = false;
+
+// The walk: straight along z, through the first gate's doorway and back. A sine
+// rather than a patrol, so there is no single step on which it turns for the
+// parties to disagree about.
+export const WALK_REACH = 5;
+export const WALK_STEPS = 160;
+// A quarter lap in is the far end of the walk, on the spawn's side of the door.
+export const WALK_START = WALK_STEPS / 4;
+
+// The flight: a figure of eight lying flat around the first gate with its long
+// axis through the doorway (`x = sin 2t / 2`, `z = sin t`), so the camera goes in
+// through the opening, loops, and comes back out through it.
+export const FLIGHT_REACH = 4;
+export const FLIGHT_HEIGHT = PAD_HEIGHT + 1.6;
+// On the walk's cadence and a second of steps behind it, so the camera reaches
+// the doorway plainly after the body rather than with it.
+export const FLIGHT_STEPS = WALK_STEPS;
+export const FLIGHT_LAG = Math.round(1.0 / TICK_DT);
+export const FLIGHT_START = (WALK_START - FLIGHT_LAG + FLIGHT_STEPS) % FLIGHT_STEPS;

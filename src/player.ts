@@ -1,7 +1,11 @@
 import { ScriptWorld, ScriptModule, AssetLoader, CollisionResult } from '@triplehex/aether';
 import { Vec2, Vec3, Quat } from './math.ts';
 import { PlayerCamera } from './player_camera.ts';
-import { FALL_LIMIT, GATES, PLAYER_SPAWN, TICK_DT } from './world.ts';
+import { Rock } from './rock.ts';
+import {
+    FALL_LIMIT, GATES, PLAYER_SPAWN, ROCK_COOLDOWN, ROCK_MUZZLE_HEIGHT, ROCK_MUZZLE_REACH, ROCK_SPEED,
+    SCRIPTED_PATH, TICK_DT, WALK_REACH, WALK_START, WALK_STEPS,
+} from './world.ts';
 
 /// The script a joining player runs, named as the project's `client_script`.
 ///
@@ -11,15 +15,24 @@ export class Player extends ScriptModule {
     declare config: {
         model: string;
         camera: PlayerCamera;
+        rock: Rock;
     };
     state = {
         cameraId: null as string | null,
+        /// Ticks left before another rock can be thrown, so that holding the
+        /// button does not empty the pile in a second.
+        throwCooldown: 0,
+        /// How far along the fixed walk this body is; see `SCRIPTED_PATH`.
+        /// Kept here rather than read off where the body stands, so a party that
+        /// mispredicted the position does not then walk a different path too.
+        walkPhase: WALK_START,
     };
 
     load(loader: AssetLoader): void {
         this.config = {
             model: loader.loadGltf("/assets/models/player/player.gltf"),
             camera: new PlayerCamera(loader),
+            rock: new Rock(loader),
         };
     }
 
@@ -47,12 +60,19 @@ export class Player extends ScriptModule {
             return;
         };
 
+        if (SCRIPTED_PATH) {
+            this.walkTheLine(world, entityId);
+            return;
+        }
+
         var v = world.getVelocity(entityId);
         var velocity = new Vec3(v.x, v.y, v.z);
         let p = world.getPosition(entityId);
 
         var pos = new Vec3(p.x, p.y, p.z);
         var isOnGround = checkOnGround(world, pos, entityId);
+
+        if (this.state.throwCooldown > 0) this.state.throwCooldown -= 1;
 
         if (isOnGround) {
             // Apply ground friction to horizontal velocity
@@ -75,6 +95,11 @@ export class Player extends ScriptModule {
         let forward = new Vec2(cameraDir.x, -cameraDir.z).normalize();
         let yaw = Math.atan2(forward.x, -forward.y);
         controls.move_direction = new Vec2(controls.move_direction).rotate(yaw);
+
+        if (controls.fire) {
+            const playerForward = new Quat(world.getRotation(entityId)).forward();
+            this.throwRock(world, new Vec3(playerPosition), playerForward.scale(-1.0));
+        }
 
         let speed = controls.sprint ? SPRINT_SPEED : RUN_SPEED;
         if (Math.abs(controls.move_direction.x) > 0.) {
@@ -143,6 +168,49 @@ export class Player extends ScriptModule {
         }
 
         world.animateModel(entityId);
+    }
+
+    /// One step of the fixed walk: straight along z, through the first gate's
+    /// doorway and back, placed outright rather than driven.
+    ///
+    /// Nothing is read off the world here, not even where the body was last
+    /// step, so a party that has it out of place puts it back on the line at
+    /// the next step rather than carrying the error forward.
+    walkTheLine(world: ScriptWorld, entityId: string) {
+        this.state.walkPhase = (this.state.walkPhase + 1) % WALK_STEPS;
+        const t = 2 * Math.PI * this.state.walkPhase / WALK_STEPS;
+        const pace = 2 * Math.PI / WALK_STEPS;
+        const gate = GATES[0].position;
+
+        world.setPosition(entityId, {
+            x: gate.x,
+            y: PLAYER_SPAWN.y,
+            z: gate.z + WALK_REACH * Math.sin(t),
+        });
+        // The line's own slope, so a heading and an animation read the walk
+        // rather than a standstill.
+        const along = WALK_REACH * Math.cos(t) * pace / TICK_DT;
+        world.setVelocity(entityId, { x: 0., y: 0., z: along });
+        world.setRotation(entityId, Quat.fromYawPitch(Math.atan2(0., -along) + Math.PI, 0.));
+        world.playAnimation(entityId, "slowrun", 0.2);
+        world.animateModel(entityId);
+    }
+
+    /// Throw a rock along `aim`.
+    throwRock(world: ScriptWorld, from: Vec3, aim: Vec3) {
+        if (this.state.throwCooldown > 0) return;
+        this.state.throwCooldown = ROCK_COOLDOWN;
+
+        const muzzle = from
+            .add(new Vec3(0, ROCK_MUZZLE_HEIGHT, 0))
+            .scaleAndAdd(aim, ROCK_MUZZLE_REACH);
+        const throwVelocity = aim.scale(ROCK_SPEED);
+
+        const rock = world.spawn();
+        world.setPosition(rock, { x: muzzle.x, y: muzzle.y, z: muzzle.z });
+        world.setVelocity(rock, { x: throwVelocity.x, y: 2.0, z: throwVelocity.z });
+        world.setRotation(rock, { x: 0, y: 0, z: 0, w: 1 });
+        world.setScript(rock, this.config.rock, {});
     }
 
     /// Where this player's camera is, in this world's coordinates.
