@@ -25,6 +25,7 @@ export class Rock extends ScriptModule {
     init(world: ScriptWorld, entityId: string): void {
         world.setTag(entityId, ROCK_TAG);
         world.setModel(entityId, this.config.model);
+        world.setCollidable(entityId, true);
         let scale = 3.0;
         world.setScale(entityId, new Vec3(scale, scale, scale));
     }

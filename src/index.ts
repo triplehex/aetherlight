@@ -67,6 +67,7 @@ export default class Aetherlight extends ScriptModule {
             // nodes of the same glTF — and the portal component, which is what
             // the renderer masks the other shard's view into.
             world.setModel(entity, this.config.portalModel);
+            world.setCollidable(entity, true);
             world.setPosition(entity, gate.position);
             world.setRotation(entity, Quat.fromYawPitch(gate.yaw, 0));
             world.setPortal(entity, gate.name, this.config.portalModel, PORTAL_HALF_WIDTH, PORTAL_HEIGHT);

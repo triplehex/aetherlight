@@ -38,6 +38,7 @@ export class Player extends ScriptModule {
 
     init(world: ScriptWorld, entityId: string) {
         world.setModel(entityId, this.config.model);
+        world.setCollidable(entityId, true);
         world.setPosition(entityId, PLAYER_SPAWN);
         world.setVelocity(entityId, { x: 0., y: 0., z: 0. });
         world.setRotation(entityId, { x: 0.0, y: 0.0, z: 0.0, w: 1.0 });

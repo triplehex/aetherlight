@@ -109,6 +109,7 @@ export function spawnTerrainChunks(world: ScriptWorld, generated: GeneratedWorld
                     },
                     material,
                 });
+                if (lod === 0) world.setCollidable(entity, true);
                 world.setTag(entity, 'TerrainChunk');
             }
         }
@@ -134,6 +135,7 @@ export function spawnProps(world: ScriptWorld, generated: GeneratedWorld, model:
         // every tick, and a few hundred props would fill the update channel
         // saying where they have always been.
         world.setStaticModel(entity, model);
+        world.setCollidable(entity, true);
         world.setStaticTransform(
             entity,
             new Vec3(prop.x, prop.y - prop.scale * 0.08, prop.z),
