@@ -10,7 +10,8 @@
     "start": "npm run bundle && aether run .",
     "deploy": "npm run build && aether deploy ./storage/aetherlight aetherlight https://aetherlight.io/api/",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "preview": "esbuild tools/preview_world.ts --bundle --format=esm --platform=node --outfile=dist/preview_world.mjs && node dist/preview_world.mjs"
+    "preview": "esbuild tools/preview_world.ts --bundle --format=esm --platform=node --outfile=dist/preview_world.mjs && node dist/preview_world.mjs",
+    "textures": "esbuild tools/terrain_textures.ts --bundle --format=esm --platform=node --outfile=dist/terrain_textures.mjs && node dist/terrain_textures.mjs"
   },
   "dependencies": {
     "@triplehex/aether": "file:../packages/aether-runtime",

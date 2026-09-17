@@ -1,14 +1,15 @@
+import type { PropModel } from '../props.ts';
 import { makeRng } from './noise.ts';
+import { PropKind, ScatterProfile } from './types.ts';
 
 /**
- * Where loose geometry goes, and where the map's landmarks are.
+ * Where things stand, and where the map's landmarks are.
  *
- * Two jobs that look alike and are not. Scatter is texture: enough rubble that
- * ground reads as ground rather than as a painted surface, spread by blue noise
- * so it never clumps into a grid. Landmarks are navigation: a handful of
- * objects placed on the map's own high points, far enough apart to be told
- * apart from each other, so that a player anywhere on the map can look up and
- * know where they are. The second is the reason the first is kept cheap.
+ * Two jobs that look alike and are not. Scatter is dressing: trees, rocks and
+ * mushrooms spread by blue noise so they never line up in a grid, each biome
+ * choosing its own. Landmarks are navigation: a handful of big stones on the
+ * map's own high points, far enough apart to be told apart, so a player
+ * anywhere can look up and know where they are.
  */
 
 export interface ScatterPoint {
@@ -17,23 +18,28 @@ export interface ScatterPoint {
     z: number;
     scale: number;
     yaw: number;
+    model: PropModel;
+    /** Metres to sink the model by, already scaled. */
+    sink: number;
+    solid: boolean;
     /** True for the handful of oversized props placed as navigation aids. */
     landmark: boolean;
 }
+
+type Disc = { x: number; z: number; radius: number };
 
 export interface ScatterInput {
     seed: string | number;
     size: number;
     heightmap: Float32Array;
     slope: Float32Array;
-    /** Per-cell density in props per 100x100 metres, from the biome mix. */
+    /** Per-cell placements per 100x100 metres, from the biome mix. */
     density: Float32Array;
-    /** Per-cell scale range, flattened as [min0, max0, min1, max1, ...]. */
-    scaleRange: Float32Array;
-    /** Per-cell slope ceiling; a cell steeper than this takes no props. */
-    maxSlope: Float32Array;
+    /** Per-cell index of the biome whose scatter the cell uses, or -1. */
+    owner: Int16Array;
+    profiles: Array<ScatterProfile | undefined>;
     /** Discs props are kept out of, e.g. the portal clearing. */
-    exclusions?: Array<{ x: number; z: number; radius: number }>;
+    exclusions?: Disc[];
     seaLevel: number;
     /** Hard ceiling on props, so a dense theme cannot flood the entity list. */
     budget: number;
@@ -47,9 +53,9 @@ export interface LandmarkInput {
     /** Landmarks are at least this far apart, so none of them is ambiguous. */
     separation: number;
     count: number;
-    scale: [number, number];
+    kinds: PropKind[];
     maxSlope: number;
-    exclusions?: Array<{ x: number; z: number; radius: number }>;
+    exclusions?: Disc[];
 }
 
 /**
@@ -57,21 +63,42 @@ export interface LandmarkInput {
  *
  * One candidate per cell of a grid sized to the tightest spacing wanted, jogged
  * inside its cell and then accepted against the local density. That is not a
- * true Poisson disc, but it has the property that matters — no two props closer
- * than a cell — for one pass over the map instead of a search per point.
+ * true Poisson disc, but it has the property that matters — no two placements
+ * closer than a cell — for one pass over the map instead of a search per point.
+ * Clumps are the exception, on purpose: a grove or a ring of mushrooms is
+ * several things close together.
  */
 export function scatterProps(input: ScatterInput): ScatterPoint[] {
-    const { size, heightmap, slope, density, scaleRange, maxSlope, seaLevel, budget } = input;
+    const { size, heightmap, slope, density, owner, profiles, seaLevel, budget } = input;
     const rng = makeRng(`${input.seed}:scatter`);
     const exclusions = input.exclusions ?? [];
 
-    // Grid pitch comes from the densest cell: at `peak` props per 100x100m, the
-    // mean spacing is 10/sqrt(peak) metres, and a cell that size gives at most
-    // one prop each.
     let peak = 0;
     for (let i = 0; i < density.length; i++) peak = Math.max(peak, density[i]);
     if (peak <= 0) return [];
     const pitch = Math.max(1.5, 10 / Math.sqrt(peak));
+
+    // Whether a prop of `kind` may stand at (x, z), and the ground height there.
+    const ground = (x: number, z: number, kind: PropKind, profile: ScatterProfile): number | null => {
+        if (x < 0 || z < 0 || x >= size || z >= size) return null;
+        const index = Math.floor(z) * size + Math.floor(x);
+        const y = heightmap[index];
+        if (y <= seaLevel + 0.2 || !grows(kind, y)) return null;
+        if (slope[index] > (kind.maxSlope ?? profile.maxSlope ?? 0.6)) return null;
+        if (excluded(exclusions, x, z)) return null;
+        return y;
+    };
+    const place = (x: number, y: number, z: number, kind: PropKind, scale: number): ScatterPoint => ({
+        x,
+        y,
+        z,
+        scale,
+        yaw: rng() * Math.PI * 2,
+        model: kind.model,
+        sink: (kind.sink ?? 0.1) * scale,
+        solid: kind.solid ?? true,
+        landmark: false,
+    });
 
     const points: ScatterPoint[] = [];
     const cells = Math.floor(size / pitch);
@@ -79,48 +106,52 @@ export function scatterProps(input: ScatterInput): ScatterPoint[] {
         for (let gx = 0; gx < cells; gx++) {
             const x = (gx + rng()) * pitch;
             const z = (gy + rng()) * pitch;
-            const ix = Math.min(size - 1, Math.floor(x));
-            const iz = Math.min(size - 1, Math.floor(z));
-            const index = iz * size + ix;
-
-            const local = density[index];
-            if (local <= 0) continue;
+            const index = Math.min(size - 1, Math.floor(z)) * size + Math.min(size - 1, Math.floor(x));
+            const profile = profiles[owner[index]];
             // The cell holds one candidate that stands for `peak` density, so
             // anything less dense than the peak accepts proportionally less.
-            if (rng() > local / peak) continue;
+            if (!profile || rng() > density[index] / peak) continue;
 
-            const y = heightmap[index];
-            if (y <= seaLevel) continue;
-            if (slope[index] > maxSlope[index]) continue;
-            if (excluded(exclusions, x, z)) continue;
+            const kinds = profile.kinds.filter(kind => grows(kind, heightmap[index]));
+            if (kinds.length === 0) continue;
+            const kind = pick(kinds, rng());
+            const y = ground(x, z, kind, profile);
+            if (y === null) continue;
+            const scale = kind.scale[0] + rng() * (kind.scale[1] - kind.scale[0]);
+            points.push(place(x, y, z, kind, scale));
 
-            const lo = scaleRange[index * 2];
-            const hi = scaleRange[index * 2 + 1];
-            points.push({
-                x,
-                y,
-                z,
-                scale: lo + rng() * (hi - lo),
-                yaw: rng() * Math.PI * 2,
-                landmark: false,
-            });
-            if (points.length >= budget) return points;
+            if (rng() >= (profile.clustering ?? 0)) continue;
+            const reach = kind.clump ?? 3;
+            const extra = 1 + Math.floor(rng() * 3);
+            for (let n = 0; n < extra; n++) {
+                const angle = rng() * Math.PI * 2;
+                const distance = reach * (0.45 + rng() * 0.55);
+                const cx = x + Math.cos(angle) * distance;
+                const cz = z + Math.sin(angle) * distance;
+                const cy = ground(cx, cz, kind, profile);
+                if (cy === null) continue;
+                points.push(place(cx, cy, cz, kind, scale * (0.6 + rng() * 0.5)));
+            }
         }
     }
-    return points;
+
+    // Over budget, drop an even share everywhere rather than the far end of the scan.
+    if (points.length <= budget) return points;
+    const keyed = points.map(point => ({ point, key: rng() }));
+    keyed.sort((a, b) => a.key - b.key);
+    return keyed.slice(0, budget).map(k => k.point);
 }
 
 /**
  * The map's high points, thinned so no two are near each other.
  *
  * Candidates are every cell that is the highest thing within a small window,
- * sorted by height and taken greedily subject to the separation rule. Greedy on
- * height rather than on prominence is the cheap version, and on eroded terrain
- * it lands in the right places anyway: erosion has already cut the map into
+ * sorted by height and taken greedily subject to the separation rule. On eroded
+ * terrain that lands in the right places: erosion has already cut the map into
  * distinct massifs, so the tallest points of each are what survives the thinning.
  */
 export function findLandmarks(input: LandmarkInput): ScatterPoint[] {
-    const { size, heightmap, slope, separation, count, scale, maxSlope } = input;
+    const { size, heightmap, slope, separation, count, kinds, maxSlope } = input;
     const rng = makeRng(`${input.seed}:landmarks`);
     const exclusions = input.exclusions ?? [];
 
@@ -150,19 +181,38 @@ export function findLandmarks(input: LandmarkInput): ScatterPoint[] {
     for (const candidate of candidates) {
         if (chosen.length >= count) break;
         if (chosen.some(p => Math.hypot(p.x - candidate.x, p.z - candidate.z) < separation)) continue;
+        const kind = pick(kinds, rng());
+        const scale = kind.scale[0] + rng() * (kind.scale[1] - kind.scale[0]);
         chosen.push({
             x: candidate.x,
             y: candidate.y,
             z: candidate.z,
-            scale: scale[0] + rng() * (scale[1] - scale[0]),
+            scale,
             yaw: rng() * Math.PI * 2,
+            model: kind.model,
+            sink: (kind.sink ?? 0.1) * scale,
+            solid: kind.solid ?? true,
             landmark: true,
         });
     }
     return chosen;
 }
 
-function excluded(discs: Array<{ x: number; z: number; radius: number }>, x: number, z: number): boolean {
+function grows(kind: PropKind, height: number): boolean {
+    return height >= (kind.above ?? -Infinity) && height <= (kind.below ?? Infinity);
+}
+
+function pick(kinds: PropKind[], roll: number): PropKind {
+    const total = kinds.reduce((sum, kind) => sum + kind.weight, 0);
+    let at = roll * total;
+    for (const kind of kinds) {
+        at -= kind.weight;
+        if (at < 0) return kind;
+    }
+    return kinds[kinds.length - 1];
+}
+
+function excluded(discs: Disc[], x: number, z: number): boolean {
     for (const disc of discs) {
         if (Math.hypot(x - disc.x, z - disc.z) < disc.radius) return true;
     }

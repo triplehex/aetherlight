@@ -1,0 +1,12 @@
+{
+    "color": "/assets/terrain/cinder_basecolor.png",
+    "height": "/assets/terrain/cinder_height.png",
+    "normal": "/assets/terrain/cinder_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/cinder_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    },
+    "emissive": "/assets/terrain/cinder_emissive.png"
+}

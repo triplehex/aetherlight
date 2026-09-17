@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/alpine_basecolor.png",
+    "height": "/assets/terrain/alpine_height.png",
+    "normal": "/assets/terrain/alpine_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/alpine_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

@@ -1,0 +1,32 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "columns",
+    "seed": 17,
+    "count": 7,
+    "heights": [
+      0.6,
+      2.6
+    ],
+    "embers": 0.3
+  },
+  "materials": {
+    "glow": {
+      "emissive": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "roughness": 0.35,
+      "base_color_texture": "../../terrain/prop_stone_basecolor.png",
+      "normal_texture": "../../terrain/prop_stone_normal.png",
+      "orm_texture": "../../terrain/prop_stone_mrao.png",
+      "emissive_texture": "../../terrain/prop_stone_basecolor.png"
+    },
+    "body": {
+      "base_color_texture": "../../terrain/prop_stone_basecolor.png",
+      "normal_texture": "../../terrain/prop_stone_normal.png",
+      "orm_texture": "../../terrain/prop_stone_mrao.png"
+    }
+  }
+}

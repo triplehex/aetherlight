@@ -1,0 +1,24 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "mushrooms",
+    "seed": 6,
+    "count": 3,
+    "size": [
+      0.55,
+      1.0
+    ]
+  },
+  "materials": {
+    "body": {
+      "base_color_texture": "../../terrain/prop_cap_basecolor.png",
+      "normal_texture": "../../terrain/prop_cap_normal.png",
+      "orm_texture": "../../terrain/prop_cap_mrao.png"
+    },
+    "cap": {
+      "base_color_texture": "../../terrain/prop_cap_basecolor.png",
+      "normal_texture": "../../terrain/prop_cap_normal.png",
+      "orm_texture": "../../terrain/prop_cap_mrao.png"
+    }
+  }
+}

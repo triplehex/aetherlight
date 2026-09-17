@@ -1,0 +1,30 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "deadTree",
+    "seed": 12,
+    "height": 3.6
+  },
+  "collision_meshes": [
+    "hull"
+  ],
+  "materials": {
+    "body": {
+      "base_color_texture": "../../terrain/prop_bark_basecolor.png",
+      "normal_texture": "../../terrain/prop_bark_normal.png",
+      "orm_texture": "../../terrain/prop_bark_mrao.png"
+    },
+    "glow": {
+      "emissive": [
+        2,
+        2,
+        2
+      ],
+      "roughness": 0.6,
+      "base_color_texture": "../../terrain/prop_bark_basecolor.png",
+      "normal_texture": "../../terrain/prop_bark_normal.png",
+      "orm_texture": "../../terrain/prop_bark_mrao.png",
+      "emissive_texture": "../../terrain/prop_bark_basecolor.png"
+    }
+  }
+}

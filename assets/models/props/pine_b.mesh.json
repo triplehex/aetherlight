@@ -1,0 +1,30 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "pine",
+    "seed": 20,
+    "height": 4.8,
+    "radius": 1.4,
+    "tiers": 3,
+    "needles": [
+      "#1b4236",
+      "#2a6247",
+      "#4a8f5e"
+    ]
+  },
+  "collision_meshes": [
+    "hull"
+  ],
+  "materials": {
+    "body": {
+      "base_color_texture": "../../terrain/prop_bark_basecolor.png",
+      "normal_texture": "../../terrain/prop_bark_normal.png",
+      "orm_texture": "../../terrain/prop_bark_mrao.png"
+    },
+    "foliage": {
+      "base_color_texture": "../../terrain/prop_foliage_basecolor.png",
+      "normal_texture": "../../terrain/prop_foliage_normal.png",
+      "orm_texture": "../../terrain/prop_foliage_mrao.png"
+    }
+  }
+}

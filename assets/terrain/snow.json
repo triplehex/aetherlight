@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/snow_basecolor.png",
+    "height": "/assets/terrain/snow_height.png",
+    "normal": "/assets/terrain/snow_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/snow_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

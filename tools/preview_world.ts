@@ -17,10 +17,10 @@
  *   npm run preview -- --no-erosion          the terrain the droplets were given
  *   npm run preview -- --width 1280 --height 720
  */
-import { deflateSync } from 'node:zlib';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { writePng } from './png.ts';
 import { generateWorld, GeneratedWorld } from '../src/terrain/generator.ts';
 import { MaterialKey, ShardTheme, THEMES } from '../src/terrain/themes.ts';
 import { unpackSplat } from '../src/terrain/splat.ts';
@@ -29,73 +29,28 @@ import { CHUNK_WIDTH, GATES, MAP_SIZE, PAD_FALLOFF, PAD_RADIUS } from '../src/wo
 
 type Rgb = [number, number, number];
 
-/** Roughly what each terrain texture looks like, for shading the preview. */
-const ALBEDO: Record<MaterialKey, Rgb> = {
-    sand: [0.78, 0.71, 0.52],
-    dirt: [0.34, 0.26, 0.18],
-    rock: [0.47, 0.46, 0.45],
-    grass: [0.24, 0.34, 0.15],
-    water: [0.14, 0.26, 0.34],
+/** The mean sRGB colour of each terrain texture, as `npm run textures` prints it. */
+const MEAN_COLOUR: Record<MaterialKey, Rgb> = {
+    grass: [0.35, 0.6, 0.18],
+    alpine: [0.33, 0.53, 0.29],
+    dirt: [0.49, 0.35, 0.21],
+    cinder: [0.3, 0.16, 0.13],
+    gravel: [0.35, 0.36, 0.38],
+    sand: [0.92, 0.81, 0.57],
+    ash: [0.35, 0.33, 0.34],
+    snow: [0.91, 0.94, 0.98],
+    rock: [0.55, 0.51, 0.47],
+    granite: [0.45, 0.49, 0.53],
+    basalt: [0.2, 0.18, 0.22],
+    lava: [1, 0.55, 0.2],
 };
+const ALBEDO = Object.fromEntries(
+    Object.entries(MEAN_COLOUR).map(([key, colour]) => [key, colour.map(c => c ** 2.2)]),
+) as Record<MaterialKey, Rgb>;
 
 const SUN: Rgb = normalize([-0.55, 0.72, -0.42]);
 const SKY_HIGH: Rgb = [0.33, 0.48, 0.72];
 const SKY_LOW: Rgb = [0.72, 0.79, 0.88];
-
-// ---------------------------------------------------------------------------
-// PNG
-// ---------------------------------------------------------------------------
-
-const CRC_TABLE = (() => {
-    const table = new Uint32Array(256);
-    for (let n = 0; n < 256; n++) {
-        let c = n;
-        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-        table[n] = c >>> 0;
-    }
-    return table;
-})();
-
-function crc32(buf: Buffer): number {
-    let c = 0xffffffff;
-    for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
-    return (c ^ 0xffffffff) >>> 0;
-}
-
-function chunk(type: string, data: Buffer): Buffer {
-    const length = Buffer.alloc(4);
-    length.writeUInt32BE(data.length);
-    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(body));
-    return Buffer.concat([length, body, crc]);
-}
-
-/** Minimal 8-bit RGB PNG writer, so the tool needs no image dependency. */
-function writePng(path: string, width: number, height: number, rgb: Uint8Array): void {
-    // One filter byte per scanline; filter 0 (none) keeps this short and the
-    // rows compress well enough for a preview.
-    const raw = Buffer.alloc(height * (width * 3 + 1));
-    for (let y = 0; y < height; y++) {
-        const from = y * width * 3;
-        raw[y * (width * 3 + 1)] = 0;
-        Buffer.from(rgb.buffer, rgb.byteOffset + from, width * 3).copy(raw, y * (width * 3 + 1) + 1);
-    }
-    const ihdr = Buffer.alloc(13);
-    ihdr.writeUInt32BE(width, 0);
-    ihdr.writeUInt32BE(height, 4);
-    ihdr[8] = 8; // bit depth
-    ihdr[9] = 2; // truecolour
-    writeFileSync(
-        path,
-        Buffer.concat([
-            Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-            chunk('IHDR', ihdr),
-            chunk('IDAT', deflateSync(raw, { level: 6 })),
-            chunk('IEND', Buffer.alloc(0)),
-        ]),
-    );
-}
 
 // ---------------------------------------------------------------------------
 // Sampling the generated world

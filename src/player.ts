@@ -1,6 +1,7 @@
 import { ScriptWorld, ScriptModule, AssetLoader, CollisionResult } from '@triplehex/aether';
 import { Vec2, Vec3, Quat } from './math.ts';
 import { PlayerCamera } from './player_camera.ts';
+import { PlayerLight } from './player_light.ts';
 import { Rock } from './rock.ts';
 import {
     FALL_LIMIT, GATES, PLAYER_SPAWN, ROCK_COOLDOWN, ROCK_MUZZLE_HEIGHT, ROCK_MUZZLE_REACH, ROCK_SPEED,
@@ -15,10 +16,12 @@ export class Player extends ScriptModule {
     declare config: {
         model: string;
         camera: PlayerCamera;
+        light: PlayerLight;
         rock: Rock;
     };
     state = {
         cameraId: null as string | null,
+        lightId: null as string | null,
         /// Ticks left before another rock can be thrown, so that holding the
         /// button does not empty the pile in a second.
         throwCooldown: 0,
@@ -32,6 +35,7 @@ export class Player extends ScriptModule {
         this.config = {
             model: loader.loadGltf("/assets/models/player/player.gltf"),
             camera: new PlayerCamera(loader),
+            light: new PlayerLight(loader),
             rock: new Rock(loader),
         };
     }
@@ -51,6 +55,10 @@ export class Player extends ScriptModule {
         world.setScript(camera, this.config.camera, { target: entityId });
 
         this.state.cameraId = camera;
+
+        const light = world.spawn();
+        world.setScript(light, this.config.light, { target: entityId });
+        this.state.lightId = light;
     }
 
     update(world: ScriptWorld, entityId: string) {

@@ -4,11 +4,17 @@
         "pbr_fragment_shader": "/assets/shaders/pbr.wgsl",
 
         "fullscreen_vert_shader": "/assets/shaders/fullscreen.wgsl",
-        "panorama_to_cubemap_shader": "/assets/shaders/panorama_to_cubemap.wgsl",
         "ibl_filter_shader": "/assets/shaders/ibl_filtering.wgsl",
         "cubemap_shader": "/assets/shaders/cubemap.wgsl",
 
-        "skybox_hdri": "/assets/kloofendal_43d_clear_puresky_1k.hdr",
+        "sky": {
+            "shader": "/assets/shaders/sky.wgsl",
+            "day_length": 1200.0,
+            "sun_tilt": 0.45,
+            "moon_intensity": 0.35,
+            "moon_color": [0.6, 0.72, 1.0],
+            "rebake_interval": 2.0
+        },
 
         "view_distance": 150.0,
         "shadow_cascades": [
@@ -21,7 +27,7 @@
 
         "lights": [
             {
-                "color": [1.0, 1.0, 1.0],
+                "color": [1.0, 0.96, 0.88],
                 "position": [128.0, 128.0, 80.0],
                 "direction": [-64.0, -64.0, -40.0],
                 "inner_cone_cos": 0.0,
@@ -32,21 +38,21 @@
             }
         ],
     
-        "lowest_filter_mip_level": 4,
-        "skybox_size": 256,
+        "lowest_filter_mip_level": 3,
+        "skybox_size": 128,
         "lambertian_filter": {
-            "size": 256,
+            "size": 32,
             "roughness": 0.0,
-            "sample_count": 2024,
+            "sample_count": 256,
             "lod_bias": 0.0,
-            "intensity_scale": 1.0
+            "intensity_scale": 0.45
         },
         "ggx_filter": {
-            "size": 256,
+            "size": 128,
             "roughness": 0.0,
-            "sample_count": 1024,
-            "lod_bias": 5.0,
-            "intensity_scale": 0.2
+            "sample_count": 48,
+            "lod_bias": 1.0,
+            "intensity_scale": 0.5
         },
         "ggx_lut_filter": {
             "size": 1024,
@@ -58,7 +64,7 @@
 
         "post_process": {
             "parameters" : {
-                "min_log_luminance": -7.0,
+                "min_log_luminance": -2.8,
                 "max_log_luminance": 2.0,
                 "tone_mapping_target_luminance": 0.2,
                 "max_bloom_iterations": 16,
@@ -75,6 +81,8 @@
 
     "water_texture": "/assets/terrain/water.json",
     "water_height": 0.0,
+    "terrain_texture_scale": 0.28,
+    "water_texture_scale": 0.1,
 
     "render_debug": "None"
 }

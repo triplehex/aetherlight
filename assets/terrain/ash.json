@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/ash_basecolor.png",
+    "height": "/assets/terrain/ash_height.png",
+    "normal": "/assets/terrain/ash_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/ash_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

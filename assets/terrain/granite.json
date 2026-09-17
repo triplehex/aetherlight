@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/granite_basecolor.png",
+    "height": "/assets/terrain/granite_height.png",
+    "normal": "/assets/terrain/granite_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/granite_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

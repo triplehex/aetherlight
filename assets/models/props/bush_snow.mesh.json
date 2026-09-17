@@ -1,0 +1,25 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "bush",
+    "seed": 23,
+    "size": 0.7,
+    "puffs": 4,
+    "leaves": [
+      "#26503a",
+      "#3b7552",
+      "#6aa37a"
+    ],
+    "snow": [
+      "#d6e4f5",
+      "#ffffff"
+    ]
+  },
+  "materials": {
+    "body": {
+      "base_color_texture": "../../terrain/prop_foliage_basecolor.png",
+      "normal_texture": "../../terrain/prop_foliage_normal.png",
+      "orm_texture": "../../terrain/prop_foliage_mrao.png"
+    }
+  }
+}

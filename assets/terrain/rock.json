@@ -5,6 +5,7 @@
     "metallic_roughness_ao": {
         "image": "/assets/terrain/rock_mrao.png",
         "use_metallic": true,
-        "use_roughness": true
+        "use_roughness": true,
+        "use_ao": true
     }
 }

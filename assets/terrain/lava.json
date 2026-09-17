@@ -1,0 +1,12 @@
+{
+    "color": "/assets/terrain/lava_basecolor.png",
+    "height": "/assets/terrain/lava_height.png",
+    "normal": "/assets/terrain/lava_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/lava_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    },
+    "emissive": "/assets/terrain/lava_emissive.png"
+}

@@ -1,3 +1,5 @@
+import type { PropModel } from '../props.ts';
+
 /**
  * The vocabulary the generator and the shard themes share.
  *
@@ -99,15 +101,33 @@ export interface GrassProfile {
     tipColor?: [number, number, number];
 }
 
-/** Loose geometry strewn over a biome. */
-export interface ScatterProfile {
-    /** Expected props per 100x100 metres. */
-    density: number;
-    /** Uniform scale range for an individual prop. */
+/** One kind of thing a biome scatters, and how often it is picked. */
+export interface PropKind {
+    model: PropModel;
+    weight: number;
+    /** Uniform scale range. */
     scale: [number, number];
+    /** Metres sunk into the ground at scale 1, so the ground meets it. */
+    sink?: number;
+    /** Steepest ground it stands on; defaults to the profile's. */
+    maxSlope?: number;
+    /** Metres around a placement its clump is spread over. */
+    clump?: number;
+    /** Heights, in metres, it grows between. */
+    above?: number;
+    below?: number;
+    /** Whether players collide with it. Bushes and mushrooms are walked through. */
+    solid?: boolean;
+}
+
+/** Things strewn over a biome. */
+export interface ScatterProfile {
+    /** Expected placements per 100x100 metres. */
+    density: number;
+    kinds: PropKind[];
     /** Props are skipped where the ground is steeper than this. */
     maxSlope?: number;
-    /** Chance a prop is a cluster of three rather than one. */
+    /** Chance a placement grows into a clump of two to four of its kind. */
     clustering?: number;
 }
 

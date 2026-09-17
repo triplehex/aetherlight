@@ -4,7 +4,7 @@ import { blurField, erodeHeightmap } from './erosion.ts';
 import { NoiseField, clamp, hash2, lerp, smoothstep } from './noise.ts';
 import { findLandmarks, ScatterPoint, scatterProps } from './scatter.ts';
 import { blurSplats, packSplat } from './splat.ts';
-import { BiomeDefinition, BiomeWeight, GroundSample, MaterialMix, TerrainProfile } from './types.ts';
+import { BiomeDefinition, BiomeWeight, GroundSample, MaterialMix, PropKind, TerrainProfile } from './types.ts';
 
 /**
  * The whole terrain pipeline, in the order it has to run.
@@ -87,7 +87,7 @@ export interface WorldGenOptions {
     chunkWidth: number;
     /** Hard ceiling on scattered props. */
     propBudget?: number;
-    landmarks?: { count: number; separation: number; scale: [number, number] };
+    landmarks?: { count: number; separation: number; kinds: PropKind[] };
 }
 
 export interface GeneratedWorld {
@@ -254,6 +254,16 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
     // Step 4: the pads again, now exactly, since the droplets moved silt across them.
     for (const pad of pads) applyPad(heightmap, size, pad);
 
+    // A clearing is not somewhere a river runs, whatever the droplets did there.
+    for (const pad of pads) {
+        for (let z = 0; z < size; z++) {
+            for (let x = 0; x < size; x++) {
+                const d = Math.hypot(x + 0.5 - pad.x, z + 0.5 - pad.z);
+                if (d < pad.radius + pad.falloff) flow[z * size + x] *= smoothstep(pad.radius, pad.radius + pad.falloff, d);
+            }
+        }
+    }
+
     const slope = computeSlope(heightmap, size);
     const moisture = blurField(flow, size, size, 3, 2);
 
@@ -262,8 +272,7 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
     const grassmap = new Uint8Array(cells);
     const grassWeight = new Float32Array(cells);
     const density = new Float32Array(cells);
-    const scaleRange = new Float32Array(cells * 2);
-    const maxSlopeMap = new Float32Array(cells);
+    const owner = new Int16Array(cells);
 
     const mix: MaterialMix = {};
     for (let z = 0; z < size; z++) {
@@ -285,9 +294,8 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
             let cover = 0;
             let grass = 0;
             let propDensity = 0;
-            let scaleLo = 0;
-            let scaleHi = 0;
-            let propSlope = 0;
+            let heaviest = -1;
+            let heaviestWeight = 0;
 
             for (const w of weights) {
                 const biome = biomes[w.biomeIndex];
@@ -303,12 +311,10 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
                     if (g.maxSlope) c *= 1 - smoothstep(g.maxSlope * 0.6, g.maxSlope, sample.slope);
                     grass += clamp(c, 0, 1) * w.weight;
                 }
-                if (biome.scatter) {
-                    const s = biome.scatter;
-                    propDensity += s.density * w.weight;
-                    scaleLo += s.scale[0] * w.weight;
-                    scaleHi += s.scale[1] * w.weight;
-                    propSlope += (s.maxSlope ?? 0.6) * w.weight;
+                if (biome.scatter) propDensity += biome.scatter.density * w.weight;
+                if (w.weight > heaviestWeight) {
+                    heaviestWeight = w.weight;
+                    heaviest = w.biomeIndex;
                 }
             }
 
@@ -330,9 +336,7 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
             grassWeight[index] = grass;
             grassmap[index] = Math.round(clamp(grass, 0, 1) * 255);
             density[index] = propDensity * above;
-            scaleRange[index * 2] = scaleLo || 1;
-            scaleRange[index * 2 + 1] = scaleHi || 1;
-            maxSlopeMap[index] = propSlope || 0.6;
+            owner[index] = heaviest;
         }
     }
     // Two passes, because one leaves the two-bit channels changing over a
@@ -348,8 +352,8 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
         heightmap,
         slope,
         density,
-        scaleRange,
-        maxSlope: maxSlopeMap,
+        owner,
+        profiles: biomes.map(biome => biome.scatter),
         exclusions,
         seaLevel,
         budget: options.propBudget ?? 240,
@@ -364,7 +368,7 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
                 slope,
                 separation: options.landmarks.separation,
                 count: options.landmarks.count,
-                scale: options.landmarks.scale,
+                kinds: options.landmarks.kinds,
                 maxSlope: 0.7,
                 exclusions,
             }),

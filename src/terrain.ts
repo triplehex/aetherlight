@@ -2,6 +2,7 @@ import { ScriptWorld } from "@triplehex/aether";
 import { Vec2, Vec3, Quat } from "./math.ts";
 import { generateWorld, GeneratedWorld, Pad } from './terrain/generator.ts';
 import { pickTheme, ShardTheme } from './terrain/themes.ts';
+import { PROP_LIGHTS, PropModel } from './props.ts';
 import { CHUNK_WIDTH, GATES, MAP_SIZE, PAD_FALLOFF, PAD_RADIUS } from './world.ts';
 
 export type { GeneratedWorld } from './terrain/generator.ts';
@@ -9,6 +10,12 @@ export type { ShardTheme } from './terrain/themes.ts';
 
 /** How many props one shard may spawn, whatever its theme asks for. */
 const PROP_LIMIT = 320;
+
+/** How many lights one shard may stand, props' and ground's together. */
+const LIGHT_LIMIT = 160;
+
+/** Metres within which two lights are one: a clump of mushrooms glows as one. */
+const LIGHT_MERGE = 3.5;
 
 /**
  * Build this shard's world.
@@ -42,7 +49,7 @@ export function generateShardWorld(seed: string | number): GeneratedWorld & { th
         climate: theme.climate,
         erosion: theme.erosion,
         landmarks: theme.landmarks,
-        propBudget: Math.min(theme.propBudget ?? 240, PROP_LIMIT),
+        propBudget: Math.min(theme.propBudget ?? 280, PROP_LIMIT),
         pads,
     });
 
@@ -128,21 +135,110 @@ export function spawnTerrainChunks(world: ScriptWorld, generated: GeneratedWorld
  * sunk slightly into the surface so that the ground meets it rather than the
  * other way round.
  */
-export function spawnProps(world: ScriptWorld, generated: GeneratedWorld, model: string): number {
+export function spawnProps(world: ScriptWorld, generated: GeneratedWorld, models: Record<PropModel, string>): number {
     for (const prop of generated.props) {
         const entity = world.spawn();
         // Static, not the ordinary setters: an interpolated component is re-sent
         // every tick, and a few hundred props would fill the update channel
         // saying where they have always been.
-        world.setStaticModel(entity, model);
-        world.setCollidable(entity, true);
+        world.setStaticModel(entity, models[prop.model]);
+        if (prop.solid) world.setCollidable(entity, true);
         world.setStaticTransform(
             entity,
-            new Vec3(prop.x, prop.y - prop.scale * 0.08, prop.z),
+            new Vec3(prop.x, prop.y - prop.sink, prop.z),
             Quat.fromYawPitch(prop.yaw, 0),
             new Vec3(prop.scale, prop.scale, prop.scale),
         );
         world.setTag(entity, prop.landmark ? 'Landmark' : 'Scatter');
     }
     return generated.props.length;
+}
+
+interface PlacedLight {
+    x: number;
+    y: number;
+    z: number;
+    color: [number, number, number];
+    intensity: number;
+    range: number;
+}
+
+/**
+ * Stand the world's lights: around luminous props, and over the ground
+ * wherever the theme says a material does.
+ *
+ * Each is an entity of its own with nothing but a place and a light, so the
+ * engine sends it to whoever is near enough to be lit by it and nobody else.
+ * Lights closer together than `LIGHT_MERGE` are folded into one a little
+ * brighter, since a dozen overlapping lamps cost a dozen times what one does
+ * and look the same.
+ */
+export function spawnLights(world: ScriptWorld, generated: GeneratedWorld & { theme: ShardTheme }): number {
+    const candidates: PlacedLight[] = [];
+    for (const prop of generated.props) {
+        const light = PROP_LIGHTS[prop.model];
+        if (!light) continue;
+        candidates.push({
+            x: prop.x,
+            y: prop.y - prop.sink + light.height * prop.scale,
+            z: prop.z,
+            color: light.color,
+            intensity: light.intensity * prop.scale,
+            range: light.range * Math.sqrt(prop.scale),
+        });
+    }
+
+    const ground = generated.theme.groundLights;
+    if (ground) {
+        const { size, splatmap, heightmap } = generated;
+        const shift = (3 - ground.channel) * 2;
+        for (let cz = 0; cz < size; cz += ground.spacing) {
+            for (let cx = 0; cx < size; cx += ground.spacing) {
+                // The thickest spot in the square, so a light stands over the
+                // middle of a pool rather than its edge.
+                let best = -1;
+                let bestWeight = 1;
+                for (let z = cz; z < Math.min(size, cz + ground.spacing); z += 2) {
+                    for (let x = cx; x < Math.min(size, cx + ground.spacing); x += 2) {
+                        const i = z * size + x;
+                        const weight = (splatmap[i] >> shift) & 0x3;
+                        if (weight > bestWeight) {
+                            bestWeight = weight;
+                            best = i;
+                        }
+                    }
+                }
+                if (best < 0) continue;
+                const x = best % size;
+                const z = Math.floor(best / size);
+                candidates.push({
+                    x,
+                    y: heightmap[best] + ground.height,
+                    z,
+                    color: ground.color,
+                    intensity: ground.intensity,
+                    range: ground.range,
+                });
+            }
+        }
+    }
+
+    const placed: PlacedLight[] = [];
+    for (const light of candidates) {
+        const near = placed.find(other => Math.hypot(other.x - light.x, other.y - light.y, other.z - light.z) < LIGHT_MERGE);
+        if (near) {
+            near.intensity = Math.min(near.intensity + light.intensity * 0.3, near.intensity * 1.8);
+            continue;
+        }
+        if (placed.length >= LIGHT_LIMIT) break;
+        placed.push({ ...light });
+    }
+
+    for (const light of placed) {
+        const entity = world.spawn();
+        world.setStaticTransform(entity, new Vec3(light.x, light.y, light.z), Quat.identity(), new Vec3(1, 1, 1));
+        world.setPointLight(entity, new Vec3(...light.color), light.intensity, light.range);
+        world.setTag(entity, 'Light');
+    }
+    return placed.length;
 }

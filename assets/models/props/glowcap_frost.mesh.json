@@ -1,0 +1,48 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "mushrooms",
+    "seed": 24,
+    "count": 4,
+    "glow": true,
+    "size": [
+      0.4,
+      0.9
+    ],
+    "cap": [
+      "#2b7fb8",
+      "#b8f2ff"
+    ],
+    "spots": [
+      "#ffffff",
+      "#ffffff"
+    ],
+    "stem": [
+      "#cbd7e6",
+      "#f2f7fc"
+    ],
+    "gills": [
+      "#8fb4cf",
+      "#cfe6f5"
+    ]
+  },
+  "materials": {
+    "glow": {
+      "emissive": [
+        3.5,
+        3.5,
+        3.5
+      ],
+      "roughness": 0.35,
+      "base_color_texture": "../../terrain/prop_cap_basecolor.png",
+      "normal_texture": "../../terrain/prop_cap_normal.png",
+      "orm_texture": "../../terrain/prop_cap_mrao.png",
+      "emissive_texture": "../../terrain/prop_cap_basecolor.png"
+    },
+    "body": {
+      "base_color_texture": "../../terrain/prop_cap_basecolor.png",
+      "normal_texture": "../../terrain/prop_cap_normal.png",
+      "orm_texture": "../../terrain/prop_cap_mrao.png"
+    }
+  }
+}

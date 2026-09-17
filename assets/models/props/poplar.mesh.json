@@ -1,0 +1,36 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "tree",
+    "seed": 3,
+    "height": 3.4,
+    "canopy": 1.05,
+    "stretch": 1.9,
+    "puffs": 5,
+    "trunk": 0.18,
+    "leaves": [
+      "#3c6e22",
+      "#6aa232",
+      "#b5d654"
+    ],
+    "bark": [
+      "#5b4631",
+      "#8a6d4f"
+    ]
+  },
+  "collision_meshes": [
+    "hull"
+  ],
+  "materials": {
+    "body": {
+      "base_color_texture": "../../terrain/prop_bark_basecolor.png",
+      "normal_texture": "../../terrain/prop_bark_normal.png",
+      "orm_texture": "../../terrain/prop_bark_mrao.png"
+    },
+    "foliage": {
+      "base_color_texture": "../../terrain/prop_foliage_basecolor.png",
+      "normal_texture": "../../terrain/prop_foliage_normal.png",
+      "orm_texture": "../../terrain/prop_foliage_mrao.png"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "boulder",
+    "seed": 16,
+    "tones": [
+      "#211e25",
+      "#2d2932",
+      "#3b3541"
+    ],
+    "embers": 0.18,
+    "roughness": 0.7
+  },
+  "materials": {
+    "glow": {
+      "emissive": [
+        5.0,
+        5.0,
+        5.0
+      ],
+      "roughness": 0.35,
+      "base_color_texture": "../../terrain/prop_stone_basecolor.png",
+      "normal_texture": "../../terrain/prop_stone_normal.png",
+      "orm_texture": "../../terrain/prop_stone_mrao.png",
+      "emissive_texture": "../../terrain/prop_stone_basecolor.png"
+    },
+    "body": {
+      "base_color_texture": "../../terrain/prop_stone_basecolor.png",
+      "normal_texture": "../../terrain/prop_stone_normal.png",
+      "orm_texture": "../../terrain/prop_stone_mrao.png"
+    }
+  }
+}

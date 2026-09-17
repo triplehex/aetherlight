@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/basalt_basecolor.png",
+    "height": "/assets/terrain/basalt_height.png",
+    "normal": "/assets/terrain/basalt_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/basalt_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

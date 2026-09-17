@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/gravel_basecolor.png",
+    "height": "/assets/terrain/gravel_height.png",
+    "normal": "/assets/terrain/gravel_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/gravel_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

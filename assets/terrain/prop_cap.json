@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/prop_cap_basecolor.png",
+    "height": "/assets/terrain/prop_cap_height.png",
+    "normal": "/assets/terrain/prop_cap_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/prop_cap_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

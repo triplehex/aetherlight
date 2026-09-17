@@ -1,0 +1,11 @@
+{
+    "color": "/assets/terrain/prop_bark_basecolor.png",
+    "height": "/assets/terrain/prop_bark_height.png",
+    "normal": "/assets/terrain/prop_bark_normal.png",
+    "metallic_roughness_ao": {
+        "image": "/assets/terrain/prop_bark_mrao.png",
+        "use_metallic": true,
+        "use_roughness": true,
+        "use_ao": true
+    }
+}

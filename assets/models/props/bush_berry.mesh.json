@@ -1,0 +1,21 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "bush",
+    "seed": 5,
+    "size": 0.8,
+    "puffs": 4,
+    "berries": [
+      "#4b2a8c",
+      "#8a5ad6"
+    ],
+    "berryCount": 12
+  },
+  "materials": {
+    "body": {
+      "base_color_texture": "../../terrain/prop_foliage_basecolor.png",
+      "normal_texture": "../../terrain/prop_foliage_normal.png",
+      "orm_texture": "../../terrain/prop_foliage_mrao.png"
+    }
+  }
+}

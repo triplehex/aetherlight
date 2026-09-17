@@ -1,0 +1,31 @@
+{
+  "script": "props.js",
+  "config": {
+    "kind": "boulder",
+    "seed": 28,
+    "shape": [
+      1.0,
+      3.4,
+      0.9
+    ],
+    "taper": 0.5,
+    "roughness": 0.6,
+    "tones": [
+      "#5d6773",
+      "#707b87",
+      "#86909b"
+    ],
+    "cover": [
+      "#dce8f6",
+      "#ffffff"
+    ],
+    "coverFrom": 0.45
+  },
+  "materials": {
+    "body": {
+      "base_color_texture": "../../terrain/prop_stone_basecolor.png",
+      "normal_texture": "../../terrain/prop_stone_normal.png",
+      "orm_texture": "../../terrain/prop_stone_mrao.png"
+    }
+  }
+}

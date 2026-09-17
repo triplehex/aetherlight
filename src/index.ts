@@ -1,9 +1,10 @@
 import { ScriptWorld, ScriptModule, AssetLoader } from '@triplehex/aether';
 import { Player } from './player.ts';
 import { Quat } from './math.ts';
-import { generateShardWorld, spawnProps, spawnTerrainChunks } from './terrain.ts';
+import { generateShardWorld, spawnLights, spawnProps, spawnTerrainChunks } from './terrain.ts';
 import { MaterialKey } from './terrain/themes.ts';
 import { GATES, PORTAL_HALF_WIDTH, PORTAL_HEIGHT } from './world.ts';
+import { PROP_MODELS, PropModel, propPath } from './props.ts';
 
 /**
  * Every terrain texture any theme can ask for.
@@ -18,6 +19,14 @@ const TERRAIN_TEXTURES: Record<MaterialKey, string> = {
     dirt: '/assets/terrain/dirt.json',
     rock: '/assets/terrain/rock.json',
     grass: '/assets/terrain/grass.json',
+    ash: '/assets/terrain/ash.json',
+    cinder: '/assets/terrain/cinder.json',
+    basalt: '/assets/terrain/basalt.json',
+    lava: '/assets/terrain/lava.json',
+    gravel: '/assets/terrain/gravel.json',
+    snow: '/assets/terrain/snow.json',
+    granite: '/assets/terrain/granite.json',
+    alpine: '/assets/terrain/alpine.json',
 };
 
 export default class Aetherlight extends ScriptModule {
@@ -28,7 +37,7 @@ export default class Aetherlight extends ScriptModule {
         client_script: Player,
 
         portalModel: string,
-        propModel: string,
+        propModels: Record<PropModel, string>,
         terrainTextures: Record<MaterialKey, string>,
     };
     state = null;
@@ -38,7 +47,9 @@ export default class Aetherlight extends ScriptModule {
             client_root: loader.loadClientRoot("/assets/client_root.json"),
             client_script: new Player(loader),
             portalModel: loader.loadGltf("/assets/models/portal.gltf"),
-            propModel: loader.loadGltf("/assets/models/small_rock.glb"),
+            propModels: Object.fromEntries(
+                PROP_MODELS.map(model => [model, loader.loadScriptedMesh(propPath(model))]),
+            ) as Record<PropModel, string>,
             terrainTextures: Object.fromEntries(
                 Object.entries(TERRAIN_TEXTURES).map(([key, path]) => [key, loader.loadTerrainTexture(path)]),
             ) as Record<MaterialKey, string>,
@@ -59,7 +70,8 @@ export default class Aetherlight extends ScriptModule {
 
         const material = theme.materials.map(key => this.config.terrainTextures[key]);
         spawnTerrainChunks(world, generated, material);
-        const props = spawnProps(world, generated, this.config.propModel);
+        const props = spawnProps(world, generated, this.config.propModels);
+        const lights = spawnLights(world, generated);
 
         for (const gate of GATES) {
             const entity = world.spawn();
@@ -76,7 +88,7 @@ export default class Aetherlight extends ScriptModule {
         console.log(
             `[Aetherlight] ${theme.name} - ${theme.blurb}\n` +
             `[Aetherlight] seed ${seed}, ${generated.size}m across, ` +
-            `${generated.chunksPerSide ** 2} chunks, ${props} props, ` +
+            `${generated.chunksPerSide ** 2} chunks, ${props} props, ${lights} lights, ` +
             `gates ${GATES.map(g => g.name).join(', ')}`,
         );
     }
